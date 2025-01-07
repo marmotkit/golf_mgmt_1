@@ -688,24 +688,56 @@ def compare_member_versions():
         logger.error(traceback.format_exc())
         return jsonify({'error': f'Error comparing versions: {str(e)}'}), 400
 
-@bp.route('/members/versions/<string:version>', methods=['DELETE'])
+@bp.route('/members/versions/<version>', methods=['DELETE'])
 def delete_version(version):
-    """刪除指定版本"""
+    """刪除指定版本的會員資料。只能刪除非最新版本。"""
     try:
+        logger.info(f'收到刪除版本請求: {version}, 類型: {type(version)}')
+        
         # 檢查是否為最新版本
-        latest_version = MemberVersion.query.order_by(MemberVersion.version.desc()).first()
-        if latest_version and latest_version.version == version:
-            # 刪除該版本的所有記錄
-            MemberVersion.query.filter_by(version=version).delete()
-            db.session.commit()
-            return jsonify({'message': f'成功刪除版本 {version}'})
-        else:
-            return jsonify({'error': '只能刪除最新版本'}), 400
+        latest_version = db.session.query(MemberVersion.version)\
+            .order_by(MemberVersion.version.desc())\
+            .first()
             
+        if not latest_version:
+            logger.error('找不到任何版本')
+            return jsonify({'error': '找不到任何版本'}), 404
+            
+        latest_version_str = str(latest_version[0])
+        version_str = str(version)
+        
+        logger.info(f'最新版本: {latest_version_str}, 要刪除的版本: {version_str}')
+        logger.info(f'版本比較結果: {version_str == latest_version_str}')
+        
+        # 檢查版本是否存在
+        version_exists = db.session.query(MemberVersion)\
+            .filter(MemberVersion.version == version_str)\
+            .first()
+            
+        if not version_exists:
+            logger.error(f'找不到要刪除的版本: {version_str}')
+            return jsonify({'error': f'找不到版本 {version_str}'}), 404
+            
+        # 最新版本不能刪除，其他版本都可以刪除
+        if str(latest_version[0]) == version_str:
+            logger.error(f'嘗試刪除最新版本被拒絕: {version_str}')
+            return jsonify({'error': '不能刪除最新版本'}), 400
+        
+        # 執行刪除
+        logger.info(f'開始執行刪除操作: {version_str}')
+        deleted_count = db.session.query(MemberVersion)\
+            .filter(MemberVersion.version == version_str)\
+            .delete()
+            
+        db.session.commit()
+        logger.info(f'成功刪除版本 {version_str}，共刪除 {deleted_count} 筆記錄')
+        return jsonify({'message': f'成功刪除版本 {version_str}'})
+        
     except Exception as e:
         db.session.rollback()
-        logger.error(f"刪除版本失敗: {str(e)}")
-        logger.error(traceback.format_exc())
+        logger.error(f'刪除版本時發生異常: {str(e)}')
+        logger.error(f'異常類型: {type(e)}')
+        logger.error(f'完整異常追蹤: {traceback.format_exc()}')
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/members/clear', methods=['POST'])

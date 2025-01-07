@@ -27,7 +27,9 @@ import {
   Snackbar,
   Alert,
   FormControlLabel,
-  CircularProgress
+  CircularProgress,
+  ArrowUpDownIcon,
+  TableSortLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -36,7 +38,7 @@ import UploadIcon from '@mui/icons-material/Upload';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5000';
 
 const Members = () => {
   const [members, setMembers] = useState([]);
@@ -53,6 +55,9 @@ const Members = () => {
   const [versionList, setVersionList] = useState([]);
   const [compareResults, setCompareResults] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [versionToDelete, setVersionToDelete] = useState(null);
 
   useEffect(() => {
     fetchMembers();
@@ -61,7 +66,7 @@ const Members = () => {
 
   const fetchVersions = async () => {
     try {
-      const response = await axios.get(`${API_URL}/members/versions`);
+      const response = await axios.get(`${API_BASE_URL}/api/members/versions`);
       setVersionList(response.data);
       if (response.data.length > 0) {
         setCurrentVersion(response.data[0]); // 最新的版本
@@ -77,7 +82,7 @@ const Members = () => {
       setLoading(true);
       // 使用當前版本號獲取會員資料
       const version = currentVersion?.version;
-      const response = await axios.get(`${API_URL}/members${version ? `?version=${version}` : ''}`);
+      const response = await axios.get(`${API_BASE_URL}/api/members${version ? `?version=${version}` : ''}`);
       // 排序會員：先按會員編號，再按會員身份（來賓排後面）
       const sortedMembers = response.data.sort((a, b) => {
         if (a.is_guest !== b.is_guest) {
@@ -100,7 +105,7 @@ const Members = () => {
       return;
     }
     try {
-      const response = await axios.post(`${API_URL}/members/compare`, compareVersions);
+      const response = await axios.post(`${API_BASE_URL}/api/members/compare`, compareVersions);
       setCompareResults(response.data);
     } catch (error) {
       console.error('Error comparing versions:', error);
@@ -110,20 +115,51 @@ const Members = () => {
 
   const handleDeleteVersion = async (version) => {
     try {
-      await axios.delete(`${API_URL}/members/versions/${version}`);
-      setSnackbar({
-        open: true,
-        message: `成功刪除版本 ${version}`,
-        severity: 'success'
-      });
-      // 重新載入版本列表
-      fetchVersions();
+      // 確保版本號是字串格式
+      const versionStr = String(version).trim();
+      
+      // 顯示刪除確認對話框
+      setVersionToDelete(version);
+      setDeleteDialogOpen(true);
     } catch (error) {
+      console.error('刪除版本失敗:', error.response?.data);
       setSnackbar({
         open: true,
         message: error.response?.data?.error || '刪除版本失敗',
         severity: 'error'
       });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      console.log('開始刪除版本操作:', versionToDelete);
+      console.log('API 請求 URL:', `${API_BASE_URL}/api/members/versions/${versionToDelete}`);
+      
+      const response = await axios.delete(`${API_BASE_URL}/api/members/versions/${versionToDelete}`);
+      console.log('刪除請求響應:', response.data);
+      
+      // 重新載入版本列表
+      fetchVersions();
+      
+      // 顯示成功訊息
+      setSnackbar({
+        open: true,
+        message: response.data.message || `成功刪除版本 ${versionToDelete}`,
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('刪除版本失敗 - 完整錯誤:', error);
+      console.error('錯誤響應數據:', error.response?.data);
+      console.error('錯誤狀態碼:', error.response?.status);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.error || '刪除版本失敗',
+        severity: 'error'
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setVersionToDelete(null);
     }
   };
 
@@ -136,7 +172,7 @@ const Members = () => {
 
     try {
       setLoading(true);
-      const response = await axios.post(`${API_URL}/members/upload`, formData, {
+      const response = await axios.post(`${API_BASE_URL}/api/members/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -153,14 +189,14 @@ const Members = () => {
       }
 
       // 重新獲取版本列表並更新當前版本
-      const versionsResponse = await axios.get(`${API_URL}/members/versions`);
+      const versionsResponse = await axios.get(`${API_BASE_URL}/api/members/versions`);
       if (versionsResponse.data.length > 0) {
         const latestVersion = versionsResponse.data[0];
         setVersionList(versionsResponse.data);
         setCurrentVersion(latestVersion);
         
         // 使用最新版本重新獲取會員資料
-        const membersResponse = await axios.get(`${API_URL}/members?version=${latestVersion.version}`);
+        const membersResponse = await axios.get(`${API_BASE_URL}/api/members?version=${latestVersion.version}`);
         const sortedMembers = membersResponse.data.sort((a, b) => {
           if (a.is_guest !== b.is_guest) {
             return a.is_guest ? 1 : -1;
@@ -189,7 +225,7 @@ const Members = () => {
       setCurrentVersion(newVersion);
       
       // 使用新版本獲取會員資料
-      const response = await axios.get(`${API_URL}/members?version=${newVersion.version}`);
+      const response = await axios.get(`${API_BASE_URL}/api/members?version=${newVersion.version}`);
       const sortedMembers = response.data.sort((a, b) => {
         if (a.is_guest !== b.is_guest) {
           return a.is_guest ? 1 : -1;
@@ -282,21 +318,23 @@ const Members = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {versionList.map((version, index) => (
+                {versionList.map((version) => (
                   <TableRow key={version.version}>
                     <TableCell>{version.version}</TableCell>
                     <TableCell>
                       {new Date(version.created_at).toLocaleString()}
                     </TableCell>
                     <TableCell align="right">
-                      {index !== 0 && (  // 不是最新版本才顯示刪除按鈕
-                        <Button
-                          size="small"
-                          color="error"
-                          onClick={() => handleDeleteVersion(version.version)}
-                        >
-                          刪除
-                        </Button>
+                      {version.version !== versionList[0].version && (  // 不是最新版本才顯示刪除按鈕
+                        <Tooltip title="刪除此版本">
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteVersion(version.version)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       )}
                     </TableCell>
                   </TableRow>
@@ -396,10 +434,10 @@ const Members = () => {
       console.log('Raw Edit Member Data (stringified):', JSON.stringify(editMember, null, 2));
       console.log('Processed Update Data:', updateData);
       console.log('Processed Update Data (stringified):', JSON.stringify(updateData, null, 2));
-      console.log('Update URL:', `${API_URL}/members/${editMember.id}`);
+      console.log('Update URL:', `${API_BASE_URL}/api/members/${editMember.id}`);
       
       const response = await axios.patch(
-        `${API_URL}/members/${editMember.id}`,
+        `${API_BASE_URL}/api/members/${editMember.id}`,
         updateData,
         {
           headers: { 'Content-Type': 'application/json' }
@@ -497,13 +535,39 @@ const Members = () => {
     if (!window.confirm('確定要刪除此會員嗎？')) return;
     
     try {
-      await axios.delete(`${API_URL}/members/${memberId}`);
+      await axios.delete(`${API_BASE_URL}/api/members/${memberId}`);
       fetchMembers();
       setSnackbar({ open: true, message: '刪除成功', severity: 'success' });
     } catch (error) {
       console.error('Error deleting member:', error);
-      setSnackbar({ open: true, message: '刪除失敗', severity: 'error' });
+      setSnackbar({ open: true, message: error.response?.data?.error || '刪除失敗', severity: 'error' });
     }
+  };
+
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+
+    const sortedMembers = [...members].sort((a, b) => {
+      if (a[key] < b[key]) return direction === 'ascending' ? -1 : 1;
+      if (a[key] > b[key]) return direction === 'ascending' ? 1 : -1;
+      return 0;
+    });
+
+    setMembers(sortedMembers);
+  };
+
+  const getSortIcon = (columnName) => {
+    return (
+      <TableSortLabel
+        active={sortConfig.key === columnName}
+        direction={sortConfig.key === columnName ? sortConfig.direction : 'asc'}
+        onClick={() => handleSort(columnName)}
+      />
+    );
   };
 
   if (loading) {
@@ -595,14 +659,30 @@ const Members = () => {
               <TableCell padding="checkbox">
                 <Checkbox />
               </TableCell>
-              <TableCell>會員編號</TableCell>
-              <TableCell>帳號</TableCell>
-              <TableCell>中文姓名</TableCell>
-              <TableCell>英文姓名</TableCell>
-              <TableCell>系級</TableCell>
-              <TableCell>會員類型</TableCell>
-              <TableCell>管理權限</TableCell>
-              <TableCell>差點</TableCell>
+              <TableCell onClick={() => handleSort('member_number')}>
+                會員編號 {getSortIcon('member_number')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('account')}>
+                帳號 {getSortIcon('account')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('chinese_name')}>
+                中文姓名 {getSortIcon('chinese_name')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('english_name')}>
+                英文姓名 {getSortIcon('english_name')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('department_class')}>
+                系級 {getSortIcon('department_class')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('is_guest')}>
+                會員類型 {getSortIcon('is_guest')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('is_admin')}>
+                管理權限 {getSortIcon('is_admin')}
+              </TableCell>
+              <TableCell onClick={() => handleSort('handicap')}>
+                差點 {getSortIcon('handicap')}
+              </TableCell>
               <TableCell>操作</TableCell>
             </TableRow>
           </TableHead>
@@ -762,18 +842,153 @@ const Members = () => {
         </DialogActions>
       </Dialog>
 
+      {/* 版本比較對話框 */}
+      <Dialog open={compareDialogOpen} onClose={() => setCompareDialogOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>版本比較</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2, mb: 2 }}>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <TextField
+                select
+                label="從版本"
+                value={compareVersions.from}
+                onChange={(e) => setCompareVersions(prev => ({ ...prev, from: e.target.value }))}
+                fullWidth
+                SelectProps={{ native: true }}
+              >
+                <option value="">請選擇版本</option>
+                {versionList.map(v => (
+                  <option key={v.version} value={v.version}>{v.version}</option>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="至版本"
+                value={compareVersions.to}
+                onChange={(e) => setCompareVersions(prev => ({ ...prev, to: e.target.value }))}
+                fullWidth
+                SelectProps={{ native: true }}
+              >
+                <option value="">請選擇版本</option>
+                {versionList.map(v => (
+                  <option key={v.version} value={v.version}>{v.version}</option>
+                ))}
+              </TextField>
+              <Button variant="contained" onClick={handleCompareVersions}>
+                比較
+              </Button>
+            </Stack>
+          </Box>
+
+          {/* 版本列表 */}
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              版本歷史
+            </Typography>
+            <TableContainer component={Paper}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell>版本號</TableCell>
+                    <TableCell>建立時間</TableCell>
+                    <TableCell align="right">操作</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {versionList.map((version) => (
+                    <TableRow key={version.version}>
+                      <TableCell>{version.version}</TableCell>
+                      <TableCell>
+                        {new Date(version.created_at).toLocaleString()}
+                      </TableCell>
+                      <TableCell align="right">
+                        {version.version !== versionList[0].version && (  // 不是最新版本才顯示刪除按鈕
+                          <Tooltip title="刪除此版本">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteVersion(version.version)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+
+          {/* 比較結果 */}
+          {compareResults && compareResults.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                差異項目
+              </Typography>
+              <TableContainer component={Paper}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>會員編號</TableCell>
+                      <TableCell>姓名</TableCell>
+                      <TableCell>變更欄位</TableCell>
+                      <TableCell>舊值</TableCell>
+                      <TableCell>新值</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {compareResults.map((diff, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{diff.member_number}</TableCell>
+                        <TableCell>{diff.name}</TableCell>
+                        <TableCell>{diff.field}</TableCell>
+                        <TableCell>{diff.old_value}</TableCell>
+                        <TableCell>{diff.new_value}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCompareDialogOpen(false)}>關閉</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 刪除確認對話框 */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>刪除確認</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            確定要刪除版本 {versionToDelete} 嗎？
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>取消</Button>
+          <Button variant="contained" color="error" onClick={handleConfirmDelete}>
+            刪除
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={handleSnackbarClose}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
-        <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
 
-      {/* 版本比較對話框 */}
-      <CompareVersionsDialog />
     </Box>
   );
 };
