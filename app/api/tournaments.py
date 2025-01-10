@@ -1,3 +1,8 @@
+from flask import Blueprint, jsonify, request
+from app.models import Tournament, db
+
+bp = Blueprint('tournaments', __name__)
+# ... 其他路由代碼 ...
 from flask import jsonify, request, current_app
 from app.api import bp
 from app.models import Tournament, db
@@ -11,13 +16,29 @@ logger = current_app.logger if current_app else logging.getLogger(__name__)
 
 @bp.route('/tournaments', methods=['GET'])
 def get_tournaments():
-    tournaments = Tournament.query.all()
-    return jsonify([t.to_dict() for t in tournaments])
+    try:
+        tournaments = Tournament.query.all()
+        return jsonify([t.to_dict() for t in tournaments])
+    except Exception as e:
+        current_app.logger.error(f"Error fetching tournaments: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': 'Failed to fetch tournaments',
+            'details': str(e)
+        }), 500
 
 @bp.route('/tournaments/<int:id>', methods=['GET'])
 def get_tournament(id):
-    tournament = Tournament.query.get_or_404(id)
-    return jsonify(tournament.to_dict())
+    try:
+        tournament = Tournament.query.get_or_404(id)
+        return jsonify(tournament.to_dict())
+    except Exception as e:
+        current_app.logger.error(f"Error fetching tournament {id}: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': f'Failed to fetch tournament {id}',
+            'details': str(e)
+        }), 500
 
 @bp.route('/tournaments', methods=['POST'])
 def create_tournament():
@@ -102,26 +123,51 @@ def update_tournament(id):
     try:
         tournament = Tournament.query.get_or_404(id)
         data = request.get_json()
+        current_app.logger.info(f"Updating tournament {id} with data: {data}")
         
-        # 修改數據映射，確保正確的鍵名
-        tournament_data = {
-            'name': data.get('name', tournament.name),
-            'date': datetime.strptime(data.get('date', tournament.date.strftime('%Y-%m-%d')), '%Y-%m-%d').date(),
-            'location': data.get('location', tournament.location),
-            'notes': data.get('notes', tournament.notes)
-        }
-        
-        tournament.from_dict(tournament_data)
-        db.session.commit()
-        return jsonify(tournament.to_dict())
+        # 檢查必要字段
+        if not all(key in data for key in ['name', 'location', 'date']):
+            return jsonify({
+                'error': 'Missing required fields',
+                'details': 'name, location, and date are required'
+            }), 400
+
+        try:
+            # 處理日期
+            if isinstance(data['date'], str):
+                date_str = data['date'].split('T')[0]  # 處理可能的時間部分
+                tournament_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            else:
+                return jsonify({
+                    'error': 'Invalid date format',
+                    'details': 'date must be a string in YYYY-MM-DD format'
+                }), 400
+
+            # 更新數據
+            tournament.name = data['name']
+            tournament.location = data['location']
+            tournament.date = tournament_date
+            tournament.notes = data.get('notes', '')
+
+            db.session.commit()
+            
+            result = tournament.to_dict()
+            current_app.logger.info(f"Updated tournament result: {result}")
+            return jsonify(result)
+            
+        except ValueError as e:
+            return jsonify({
+                'error': 'Invalid date format',
+                'details': str(e)
+            }), 400
+            
     except Exception as e:
-        logger.error(f"Error updating tournament: {str(e)}")
-        logger.error(traceback.format_exc())
+        current_app.logger.error(f"Error updating tournament: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
         db.session.rollback()
         return jsonify({
             'error': 'Failed to update tournament',
-            'details': str(e),
-            'traceback': traceback.format_exc()
+            'details': str(e)
         }), 500
 
 @bp.route('/tournaments/<int:id>', methods=['DELETE'])

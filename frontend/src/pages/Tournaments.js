@@ -66,10 +66,13 @@ function Tournaments() {
 
   // 处理编辑赛事
   const handleEditClick = (tournament) => {
-    setSelectedTournament({
+    console.log('Editing tournament:', tournament);
+    const formattedTournament = {
       ...tournament,
-      date: dayjs(tournament.date),
-    });
+      date: dayjs(tournament.date)
+    };
+    console.log('Formatted tournament:', formattedTournament);
+    setSelectedTournament(formattedTournament);
     setDialogOpen(true);
   };
 
@@ -88,23 +91,19 @@ function Tournaments() {
   // 处理表单提交
   const handleDialogSubmit = async (formData) => {
     try {
-      const submitData = {
-        ...formData,
-        date: dayjs(formData.date).format('YYYY-MM-DD'),
-      };
-
+      console.log('Submitting form data:', formData);
       if (selectedTournament) {
-        await tournamentService.updateTournament(selectedTournament.id, submitData);
+        await tournamentService.updateTournament(selectedTournament.id, formData);
         showSnackbar('賽事更新成功');
       } else {
-        await tournamentService.createTournament(submitData);
+        await tournamentService.createTournament(formData);
         showSnackbar('賽事創建成功');
       }
-      
-      await fetchTournaments();
-      setDialogOpen(false);
+      handleDialogClose();
+      fetchTournaments();
     } catch (error) {
-      showSnackbar(error.message, 'error');
+      console.error('Error submitting tournament:', error);
+      showSnackbar(error.response?.data?.error || '操作失敗', 'error');
     }
   };
 

@@ -19,8 +19,27 @@ function TournamentDialog({ open, onClose, onSubmit, tournament = null }) {
     location: '',
     date: dayjs(),
     notes: '',
-    ...tournament,
   });
+
+  // 當對話框打開或 tournament 改變時，更新表單數據
+  React.useEffect(() => {
+    if (tournament) {
+      console.log('Setting form data from tournament:', tournament);
+      setFormData({
+        name: tournament.name || '',
+        location: tournament.location || '',
+        date: tournament.date ? dayjs(tournament.date) : dayjs(),
+        notes: tournament.notes || '',
+      });
+    } else {
+      setFormData({
+        name: '',
+        location: '',
+        date: dayjs(),
+        notes: '',
+      });
+    }
+  }, [tournament, open]);
 
   const handleChange = (field) => (event) => {
     setFormData({
@@ -30,6 +49,7 @@ function TournamentDialog({ open, onClose, onSubmit, tournament = null }) {
   };
 
   const handleDateChange = (newDate) => {
+    console.log('Date changed to:', newDate);
     setFormData({
       ...formData,
       date: newDate,
@@ -38,7 +58,7 @@ function TournamentDialog({ open, onClose, onSubmit, tournament = null }) {
 
   const handleSubmit = () => {
     if (!formData.date || !formData.date.isValid()) {
-      console.error('Invalid date');
+      console.error('Invalid date:', formData.date);
       return;
     }
 
@@ -49,7 +69,7 @@ function TournamentDialog({ open, onClose, onSubmit, tournament = null }) {
       notes: formData.notes || ''
     };
     
-    console.log('Submitting data to server:', JSON.stringify(submitData, null, 2));
+    console.log('Submitting data:', submitData);
     onSubmit(submitData);
   };
 

@@ -1,4 +1,7 @@
-from flask import jsonify, request, current_app
+from flask import Blueprint, jsonify, request
+from app.models import Member, db
+
+bp = Blueprint('members', __name__)
 from werkzeug.utils import secure_filename
 import pandas as pd
 import os
@@ -589,8 +592,8 @@ def compare_versions():
                         'member_number': member_number,
                         'name': member_name,
                         'field': field,
-                        'old_value': old_value,
-                        'new_value': new_value
+                        'old': old_value,
+                        'new': new_value
                     })
 
         logger.info(f'Found {len(differences)} differences between versions {from_version} and {to_version}')
@@ -769,3 +772,30 @@ def get_member_count():
         logger.error(f"獲取會員總數失敗: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/members/count', methods=['GET'])
+def get_members_count():
+    try:
+        count = Member.query.count()
+        return jsonify({'count': count})
+    except Exception as e:
+        current_app.logger.error(f"Error getting member count: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': 'Failed to get member count',
+            'details': str(e)
+        }), 500
+
+@bp.route('/average-handicap', methods=['GET'])
+def get_average_handicap():
+    try:
+        result = db.session.query(db.func.avg(Member.handicap)).filter(Member.handicap != None).scalar()
+        average_handicap = float(result) if result is not None else 0
+        return jsonify({'averageHandicap': round(average_handicap, 1)})
+    except Exception as e:
+        current_app.logger.error(f"Error calculating average handicap: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': 'Failed to calculate average handicap',
+            'details': str(e)
+        }), 500
