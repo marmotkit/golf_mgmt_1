@@ -1,5 +1,6 @@
 from datetime import datetime
 from app import db
+import json
 
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -34,9 +35,57 @@ class Tournament(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128), nullable=False)
     date = db.Column(db.Date, nullable=False)
-    location = db.Column(db.String(128))
-    description = db.Column(db.Text)
+    location = db.Column(db.String(128), nullable=False)
+    notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        """將賽事數據轉換為字典格式"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'date': self.date.strftime('%Y-%m-%d'),
+            'location': self.location,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    def from_dict(self, data):
+        """從字典格式更新賽事數據"""
+        from flask import current_app
+        
+        # 记录输入数据
+        current_app.logger.info(f"[from_dict] Start processing data: {json.dumps(data, ensure_ascii=False)}")
+        
+        # 处理基本字段
+        for field in ['name', 'location', 'notes']:
+            if field in data:
+                current_app.logger.info(f"[from_dict] Setting {field} = {data[field]}")
+                setattr(self, field, data[field])
+        
+        # 处理日期
+        if 'date' in data:
+            try:
+                current_app.logger.info(f"[from_dict] Processing date: {data['date']}")
+                if isinstance(data['date'], str):
+                    current_app.logger.info(f"[from_dict] Converting date string: {data['date']}")
+                    try:
+                        self.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+                    except ValueError as e:
+                        current_app.logger.error(f"[from_dict] Date conversion error: {str(e)}")
+                        raise ValueError(f"Invalid date format. Expected 'YYYY-MM-DD', got '{data['date']}'")
+                else:
+                    current_app.logger.info(f"[from_dict] Using date object directly: {data['date']}")
+                    self.date = data['date']
+                current_app.logger.info(f"[from_dict] Date set successfully to: {self.date}")
+            except Exception as e:
+                current_app.logger.error(f"[from_dict] Unexpected error processing date: {str(e)}")
+                raise
+        
+        # 记录最终状态
+        current_app.logger.info(f"[from_dict] Final object state: name={self.name}, date={self.date}, location={self.location}, notes={self.notes}")
 
 class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)
