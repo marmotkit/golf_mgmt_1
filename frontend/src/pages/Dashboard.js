@@ -80,10 +80,10 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         const [statsResponse, announcementsResponse, versionResponse, descriptionResponse] = await Promise.all([
-          axios.get('/dashboard/stats'),
-          axios.get('/dashboard/announcements'),
-          axios.get('/version'),
-          axios.get('/version/description'),
+          axios.get('/api/dashboard/stats'),
+          axios.get('/api/dashboard/announcements'),
+          axios.get('/api/version'),
+          axios.get('/api/version/description'),
         ]);
 
         setStats(statsResponse.data);
