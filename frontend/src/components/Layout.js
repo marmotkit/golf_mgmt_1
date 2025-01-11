@@ -21,6 +21,7 @@ import {
   EmojiEvents as TournamentsIcon,
   Score as ScoreIcon,
   Assessment as ReportIcon,
+  SportsEsports as GameIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -31,6 +32,7 @@ const menuItems = [
   { text: '賽事管理', icon: <TournamentsIcon />, path: '/tournaments' },
   { text: '成績管理', icon: <ScoreIcon />, path: '/scores' },
   { text: '報表分析', icon: <ReportIcon />, path: '/reports' },
+  { text: '歡樂賽場', icon: <GameIcon />, path: '/games' },
 ];
 
 function Layout() {

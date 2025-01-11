@@ -9,6 +9,7 @@ import Members from './pages/Members';
 import Tournaments from './pages/Tournaments';
 import Scores from './pages/Scores';
 import Reports from './pages/Reports';
+import Games from './pages/Games';
 
 const theme = createTheme({
   palette: {
@@ -36,6 +37,7 @@ function App() {
             <Route path="/tournaments" element={<Tournaments />} />
             <Route path="/scores" element={<Scores />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/games" element={<Games />} />
           </Route>
         </Routes>
       </Router>

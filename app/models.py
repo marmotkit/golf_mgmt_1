@@ -209,3 +209,52 @@ class SystemConfig(db.Model):
             'value': self.value,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+
+class Game(db.Model):
+    __tablename__ = 'games'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    rules = db.Column(db.Text)
+    type = db.Column(db.String(50), default='default')  # 新增遊戲類型欄位
+    config = db.Column(db.JSON)  # 新增遊戲配置欄位
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    prizes = db.relationship('GamePrize', backref='game', lazy='dynamic', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'rules': self.rules,
+            'type': self.type,
+            'config': self.config,
+            'prizes': [prize.to_dict() for prize in self.prizes],
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
+class GamePrize(db.Model):
+    __tablename__ = 'game_prizes'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.id', ondelete='CASCADE'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    position = db.Column(db.Integer, nullable=False)  # 在轉盤上的位置（0-23）
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'game_id': self.game_id,
+            'name': self.name,
+            'description': self.description,
+            'position': self.position,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
