@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Outlet, Link } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Routes, Route, Outlet } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AppBar, Toolbar, Typography, Container, Box } from '@mui/material';
@@ -24,21 +24,45 @@ const theme = createTheme({
   },
 });
 
+const router = createBrowserRouter([
+  {
+    element: <Layout />,
+    children: [
+      {
+        path: '/',
+        element: <Dashboard />,
+      },
+      {
+        path: '/members',
+        element: <Members />,
+      },
+      {
+        path: '/tournaments',
+        element: <Tournaments />,
+      },
+      {
+        path: '/scores',
+        element: <Scores />,
+      },
+      {
+        path: '/reports',
+        element: <Reports />,
+      },
+    ],
+  },
+], {
+  future: {
+    v7_relativeSplatPath: true,
+    v7_normalizeFormMethod: true,
+    v7_prependBasename: true,
+  },
+});
+
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/members" element={<Members />} />
-            <Route path="/tournaments" element={<Tournaments />} />
-            <Route path="/scores" element={<Scores />} />
-            <Route path="/reports" element={<Reports />} />
-          </Route>
-        </Routes>
-      </Router>
+      <RouterProvider router={router} />
     </ThemeProvider>
   );
 }
