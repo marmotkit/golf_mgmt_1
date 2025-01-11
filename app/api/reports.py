@@ -125,12 +125,28 @@ def get_stats():
             reverse=True
         )[:5]
         
+        # 計算全勤獎
+        member_attendance = {}
+        tournament_count = len(tournament_ids)
+        
+        for score in scores:
+            if score.chinese_name not in member_attendance:
+                member_attendance[score.chinese_name] = set()
+            member_attendance[score.chinese_name].add(score.tournament_id)
+        
+        perfect_attendance = [
+            {'member_name': name}
+            for name, tournaments in member_attendance.items()
+            if len(tournaments) == tournament_count  # 參加所有選擇的賽事
+        ]
+        
         response_data = {
             'avg_team_handicaps': avg_team_handicaps,
             'avg_team_scores': avg_team_scores,
             'top_points': top_points,
             'top_scores': top_scores,
-            'top_improvements': top_improvements
+            'top_improvements': top_improvements,
+            'perfect_attendance': perfect_attendance
         }
         
         current_app.logger.info(f"返回報表數據: {response_data}")

@@ -22,6 +22,7 @@ import {
   Score as ScoreIcon,
   Assessment as ReportIcon,
   SportsEsports as GameIcon,
+  BarChart as BarChartIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 240;
@@ -31,8 +32,8 @@ const menuItems = [
   { text: '會員管理', icon: <PeopleIcon />, path: '/members' },
   { text: '賽事管理', icon: <TournamentIcon />, path: '/tournaments' },
   { text: '成績管理', icon: <ScoreIcon />, path: '/scores' },
+  { text: '報表分析', icon: <BarChartIcon />, path: '/reports' },
   { text: '歡樂賽場', icon: <GameIcon />, path: '/games' },
-  { text: '報表分析', icon: <ReportIcon />, path: '/reports' }
 ];
 
 function Layout() {

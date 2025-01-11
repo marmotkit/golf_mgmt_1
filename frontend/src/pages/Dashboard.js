@@ -2,14 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Container, Grid, Paper, Typography, Box, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '@mui/material/styles';
-import MaleIcon from '@mui/icons-material/Male';
-import FemaleIcon from '@mui/icons-material/Female';
-import PeopleIcon from '@mui/icons-material/People';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import GolfCourseIcon from '@mui/icons-material/GolfCourse';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AddIcon from '@mui/icons-material/Add';
+import {
+  People as PeopleIcon,
+  Male as MaleIcon,
+  Female as FemaleIcon,
+  GolfCourse as GolfCourseIcon,
+  EmojiEvents as EmojiEventsIcon,
+  Add as AddIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  EmojiEvents as TrophyIcon
+} from '@mui/icons-material';
 import CheckIcon from '@mui/icons-material/Check';
 import axios from '../utils/axios';
 
@@ -286,12 +289,12 @@ const Dashboard = () => {
                 本年度賽事
               </Typography>
             </IconWrapper>
-            <Typography variant="h4" component="div" gutterBottom>
-              {stats.tournament_count}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              最新賽事：{stats.latest_tournament_name || '無'}
-            </Typography>
+            <Box display="flex" alignItems="center">
+              <TrophyIcon sx={{ fontSize: 40, mr: 2 }} />
+              <Typography variant="h3">
+                {stats.tournament_count || 0}
+              </Typography>
+            </Box>
           </StatsCard>
         </Grid>
 

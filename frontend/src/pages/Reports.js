@@ -252,14 +252,14 @@ const Reports = () => {
           </Grid>
 
           {/* 前5名最佳進步獎表格 */}
-          <Grid item xs={12}>
+          <Grid item xs={12} md={8}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   前5名最佳進步獎
                 </Typography>
-                <TableContainer component={Paper}>
-                  <Table>
+                <TableContainer component={Paper} sx={{ height: 300 }}>
+                  <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
                         <TableCell>會員姓名</TableCell>
@@ -275,6 +275,33 @@ const Reports = () => {
                           <TableCell align="right">{improvement.initial_handicap}</TableCell>
                           <TableCell align="right">{improvement.final_handicap}</TableCell>
                           <TableCell align="right">{improvement.improvement}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Grid>
+
+          {/* 全勤獎表格 */}
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  全勤獎
+                </Typography>
+                <TableContainer component={Paper} sx={{ height: 300 }}>
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>會員姓名</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {stats.perfect_attendance.map((member, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{member.member_name}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
