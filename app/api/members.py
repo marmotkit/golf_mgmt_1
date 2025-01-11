@@ -1,4 +1,7 @@
-from flask import jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app
+from app.models import Member, db
+
+bp = Blueprint('members', __name__)
 from werkzeug.utils import secure_filename
 import pandas as pd
 import os
@@ -79,77 +82,79 @@ def process_excel_data(df):
             return 0, ['Excel 檔案中包含重複的會員編號']
 
         # 第二步：開始資料庫事務
-        with db.session.begin_nested():
-            # 生成新版本號
-            version_number = generate_version_number()
-            logger.info(f'Starting transaction with version: {version_number}')
-            
-            # 第三步：處理每一行資料
-            new_members = []
-            version_records = []
-            row_errors = []
-            
-            for index, row in df.iterrows():
-                try:
-                    logger.info(f'Processing row {index + 1}')
-                    member_data = {
-                        'account': str(row['帳號']),
-                        'chinese_name': str(row['中文姓名']),
-                        'english_name': str(row['英文姓名']) if pd.notna(row['英文姓名']) else None,
-                        'department_class': str(row['系級']) if pd.notna(row['系級']) else None,
-                        'member_number': str(row['會員編號']) if pd.notna(row['會員編號']) else None,
-                        'is_guest': str(row['會員類型']).strip() == '來賓',
-                        'is_admin': str(row['是否為管理員']).strip() in ['是', '1', 'True', 'true'],
-                        'handicap': float(row['差點']) if pd.notna(row['差點']) else None
-                    }
-                    
-                    # 檢查必要欄位是否有值
-                    if not member_data['member_number'] or not member_data['account'] or not member_data['chinese_name']:
-                        error_msg = f"第 {index + 2} 行資料驗證失敗: 會員編號、帳號和中文姓名為必填欄位"
-                        logger.error(error_msg)
-                        row_errors.append(error_msg)
-                        continue
+        version_number = generate_version_number()
+        logger.info(f'Starting transaction with version: {version_number}')
+        
+        # 第三步：處理每一行資料
+        new_members = []
+        version_records = []
+        row_errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                logger.info(f'Processing row {index + 1}')
+                member_data = {
+                    'account': str(row['帳號']).strip(),
+                    'chinese_name': str(row['中文姓名']).strip(),
+                    'english_name': str(row['英文姓名']).strip() if pd.notna(row['英文姓名']) else None,
+                    'department_class': str(row['系級']).strip() if pd.notna(row['系級']) else None,
+                    'member_number': str(row['會員編號']).strip() if pd.notna(row['會員編號']) else None,
+                    'is_guest': str(row['會員類型']).strip() == '來賓',
+                    'is_admin': str(row['是否為管理員']).strip() in ['是', '1', 'True', 'true'],
+                    'handicap': float(row['差點']) if pd.notna(row['差點']) else None
+                }
 
-                    # 查找或創建會員記錄
-                    member = Member.query.filter_by(member_number=member_data['member_number']).first()
-                    if not member:
-                        logger.info(f'Creating new member: {member_data["member_number"]}')
-                        member = Member(
-                            account=member_data['account'],
-                            chinese_name=member_data['chinese_name'],
-                            english_name=member_data['english_name'],
-                            department_class=member_data['department_class'],
-                            member_number=member_data['member_number'],
-                            is_guest=member_data['is_guest'],
-                            is_admin=member_data['is_admin'],
-                            handicap=member_data['handicap']
-                        )
-                        new_members.append(member)
-                        db.session.add(member)
-                        db.session.flush()  # 獲取 member.id
-                    else:
-                        logger.info(f'Updating existing member: {member_data["member_number"]}')
-
-                    # 創建版本記錄
-                    version = MemberVersion(
-                        member_id=member.id,
-                        version=version_number,
-                        data=member_data,
-                        created_at=datetime.now()
-                    )
-                    version_records.append(version)
-                    success_count += 1
-                    logger.info(f'Successfully processed member: {member_data["member_number"]}')
-                    
-                except Exception as e:
-                    error_msg = f"第 {index + 2} 行資料驗證失敗: {str(e)}"
+                # 檢查必要欄位是否有值
+                if not member_data['member_number'] or not member_data['account'] or not member_data['chinese_name']:
+                    error_msg = f"第 {index + 2} 行資料驗證失敗: 會員編號、帳號和中文姓名為必填欄位"
                     logger.error(error_msg)
-                    logger.error(traceback.format_exc())
                     row_errors.append(error_msg)
+                    continue
 
-            # 如果有成功處理的資料，就提交
-            if success_count > 0:
-                logger.info(f'Committing {success_count} members to version {version_number}')
+                # 查找或創建會員記錄
+                member = Member.query.filter_by(member_number=member_data['member_number']).first()
+                if not member:
+                    logger.info(f'Creating new member: {member_data["member_number"]}')
+                    member = Member(
+                        account=member_data['account'],
+                        chinese_name=member_data['chinese_name'],
+                        english_name=member_data['english_name'],
+                        department_class=member_data['department_class'],
+                        member_number=member_data['member_number'],
+                        is_guest=member_data['is_guest'],
+                        is_admin=member_data['is_admin'],
+                        handicap=member_data['handicap']
+                    )
+                    new_members.append(member)
+                    db.session.add(member)
+                    db.session.flush()  # 獲取 member.id
+                else:
+                    logger.info(f'Updating existing member: {member_data["member_number"]}')
+                    # 更新現有會員資料
+                    for key, value in member_data.items():
+                        setattr(member, key, value)
+
+                # 創建版本記錄
+                version = MemberVersion(
+                    member_id=member.id,
+                    version=version_number,
+                    data=member_data,
+                    created_at=datetime.now()
+                )
+                version_records.append(version)
+                success_count += 1
+                logger.info(f'Successfully processed member: {member_data["member_number"]}')
+                
+            except Exception as e:
+                error_msg = f"第 {index + 2} 行資料驗證失敗: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                row_errors.append(error_msg)
+
+        # 如果有成功處理的資料，就提交
+        if success_count > 0:
+            logger.info(f'Committing {success_count} members to version {version_number}')
+            try:
                 # 批次添加版本記錄
                 for version in version_records:
                     db.session.add(version)
@@ -158,16 +163,22 @@ def process_excel_data(df):
                 # 提交所有更改
                 db.session.commit()
                 logger.info(f'Successfully committed version {version_number} with {success_count} members')
-                
-                # 將行錯誤添加到錯誤訊息中
-                error_messages.extend(row_errors)
-                
-            else:
+            except Exception as e:
                 db.session.rollback()
-                logger.error('No successful records to commit')
-                error_messages.extend(row_errors)
-                return 0, error_messages
-                
+                error_msg = f"資料庫提交失敗: {str(e)}"
+                logger.error(error_msg)
+                logger.error(traceback.format_exc())
+                return 0, [error_msg]
+            
+            # 將行錯誤添加到錯誤訊息中
+            error_messages.extend(row_errors)
+            
+        else:
+            db.session.rollback()
+            logger.error('No successful records to commit')
+            error_messages.extend(row_errors)
+            return 0, error_messages
+
     except Exception as e:
         db.session.rollback()
         error_msg = f"資料庫錯誤: {str(e)}"
@@ -192,16 +203,18 @@ def get_members():
     try:
         # 從查詢參數中獲取版本號，如果沒有指定則使用最新版本
         version = request.args.get('version')
-        if not version:
-            # 獲取最新版本號
-            latest_version = db.session.query(MemberVersion.version)\
-                .order_by(MemberVersion.version.desc())\
-                .first()
-            if latest_version:
-                version = latest_version[0]
-            else:
-                return jsonify([])
-
+        
+        # 獲取最新版本號
+        latest_version = db.session.query(MemberVersion.version)\
+            .order_by(MemberVersion.version.desc())\
+            .first()
+            
+        if not version and latest_version:
+            version = latest_version[0]
+        elif not latest_version:
+            logger.warning('No member versions found in database')
+            return jsonify([])
+            
         logger.info(f'Fetching members for version: {version}')
         
         # 使用指定版本號獲取會員資料
@@ -218,18 +231,22 @@ def get_members():
         # 整理會員資料
         result = []
         for member, version_data in members_data:
-            member_dict = {
-                'id': member.id,
-                'account': member.account,
-                'chinese_name': member.chinese_name,
-                'english_name': member.english_name,
-                'department_class': member.department_class,
-                'member_number': member.member_number,
-                'is_guest': member.is_guest,
-                'is_admin': member.is_admin,
-                'handicap': version_data.get('handicap')
-            }
-            result.append(member_dict)
+            try:
+                member_dict = {
+                    'id': member.id,
+                    'account': member.account,
+                    'chinese_name': member.chinese_name,
+                    'english_name': member.english_name,
+                    'department_class': member.department_class,
+                    'member_number': member.member_number,
+                    'is_guest': member.is_guest,
+                    'is_admin': member.is_admin,
+                    'handicap': float(version_data.get('handicap')) if version_data and version_data.get('handicap') is not None else None
+                }
+                result.append(member_dict)
+            except Exception as e:
+                logger.error(f'Error processing member {member.id}: {str(e)}')
+                continue
 
         logger.info(f'Found {len(result)} members for version {version}')
         return jsonify(result)
@@ -589,8 +606,8 @@ def compare_versions():
                         'member_number': member_number,
                         'name': member_name,
                         'field': field,
-                        'old_value': old_value,
-                        'new_value': new_value
+                        'old': old_value,
+                        'new': new_value
                     })
 
         logger.info(f'Found {len(differences)} differences between versions {from_version} and {to_version}')
@@ -605,36 +622,41 @@ def compare_versions():
 def get_all_versions():
     """獲取所有版本列表"""
     try:
-        # 獲取所有唯一的版本號，按版本號降序排序
+        # 獲取所有不重複的版本號，按版本號降序排序
         versions = db.session.query(MemberVersion.version)\
-            .group_by(MemberVersion.version)\
+            .distinct()\
             .order_by(MemberVersion.version.desc())\
             .all()
         
-        logger.info(f'Found {len(versions)} versions')
-        
-        # 提取版本號並添加創建時間
-        version_list = []
-        for version in versions:
-            # 獲取該版本的第一條記錄的創建時間
-            first_record = MemberVersion.query.filter_by(version=version[0])\
-                .order_by(MemberVersion.created_at.asc())\
-                .first()
-            
-            if first_record:
-                logger.info(f'Version {version[0]} created at {first_record.created_at}')
-                version_list.append({
-                    'version': version[0],
-                    'created_at': first_record.created_at.isoformat() if first_record else None
+        # 獲取每個版本的會員數量
+        version_info = []
+        for (version,) in versions:
+            try:
+                # 計算該版本的會員數量
+                member_count = db.session.query(func.count(MemberVersion.id))\
+                    .filter(MemberVersion.version == version)\
+                    .scalar()
+                
+                # 獲取該版本的創建時間
+                created_at = db.session.query(MemberVersion.created_at)\
+                    .filter(MemberVersion.version == version)\
+                    .order_by(MemberVersion.created_at.asc())\
+                    .first()
+                
+                version_info.append({
+                    'version': str(version),
+                    'member_count': member_count,
+                    'created_at': created_at[0].isoformat() if created_at else None
                 })
-            else:
-                logger.warning(f'No records found for version {version[0]}')
+            except Exception as e:
+                logger.error(f'Error processing version {version}: {str(e)}')
+                continue
         
-        logger.info(f'Returning version list: {version_list}')
-        return jsonify(version_list)
+        logger.info(f'Found {len(version_info)} versions')
+        return jsonify(version_info)
         
     except Exception as e:
-        logger.error(f"獲取版本列表失敗: {str(e)}")
+        logger.error(f'Error getting versions: {str(e)}')
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
@@ -801,3 +823,30 @@ def get_member_count():
         logger.error(f"獲取會員總數失敗: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
+@bp.route('/members/count', methods=['GET'])
+def get_members_count():
+    try:
+        count = Member.query.count()
+        return jsonify({'count': count})
+    except Exception as e:
+        current_app.logger.error(f"Error getting member count: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': 'Failed to get member count',
+            'details': str(e)
+        }), 500
+
+@bp.route('/average-handicap', methods=['GET'])
+def get_average_handicap():
+    try:
+        result = db.session.query(db.func.avg(Member.handicap)).filter(Member.handicap != None).scalar()
+        average_handicap = float(result) if result is not None else 0
+        return jsonify({'averageHandicap': round(average_handicap, 1)})
+    except Exception as e:
+        current_app.logger.error(f"Error calculating average handicap: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': 'Failed to calculate average handicap',
+            'details': str(e)
+        }), 500
