@@ -1,12 +1,11 @@
 import axios from 'axios';
 
-// 直接設置 API URL
-const API_URL = 'https://golf-mgmt-backend.onrender.com';
+const API_URL = 'https://golf-mgmt-backend.onrender.com/api';
 
 console.log('Using API URL:', API_URL);
 
 const instance = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: API_URL,
   timeout: 5000,
   headers: {
     'Content-Type': 'application/json',
