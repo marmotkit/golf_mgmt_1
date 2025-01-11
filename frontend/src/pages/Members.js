@@ -38,7 +38,7 @@ import UploadIcon from '@mui/icons-material/Upload';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Members = () => {
   const [members, setMembers] = useState([]);

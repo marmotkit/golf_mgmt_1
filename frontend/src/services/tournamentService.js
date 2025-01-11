@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -18,10 +18,10 @@ const handleError = (error) => {
     throw new Error(`${errorMessage}\n${errorDetails}`);
   } else if (error.request) {
     // 请求已发送但没有收到响应
-    throw new Error('无法连接到服务器，请检查网络连接');
+    throw new Error('無法連接到服務器，請檢查網絡連接');
   } else {
     // 请求配置出错
-    throw new Error('请求配置错误');
+    throw new Error('請求配置錯誤');
   }
 };
 
