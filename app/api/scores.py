@@ -17,18 +17,20 @@ import csv
 @bp.route('/scores', methods=['GET'])
 def get_scores():
     try:
-        tournament_id = request.args.get('tournament_id', type=int)
-        query = Score.query
+        tournament_id = request.args.get('tournament_id')
+        if not tournament_id:
+            return jsonify({'error': '未提供賽事ID'}), 400
+            
+        scores = Score.query.filter_by(tournament_id=tournament_id).all()
+        return jsonify([score.to_dict() for score in scores])
         
-        if tournament_id:
-            query = query.filter_by(tournament_id=tournament_id)
-        
-        scores = query.order_by(Score.net_rank).all()
-        return jsonify([s.to_dict() for s in scores])
     except Exception as e:
-        current_app.logger.error(f'獲取成績列表時發生錯誤：{str(e)}')
+        current_app.logger.error(f"獲取成績時發生錯誤: {str(e)}")
         current_app.logger.error(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': '獲取成績失敗',
+            'details': str(e)
+        }), 500
 
 @bp.route('/scores/<int:id>', methods=['GET'])
 def get_score(id):
@@ -213,3 +215,195 @@ def delete_score(id):
     db.session.delete(score)
     db.session.commit()
     return '', 204
+
+@bp.route('/scores/clear', methods=['POST'])
+def clear_scores():
+    try:
+        Score.query.delete()
+        db.session.commit()
+        return jsonify({'message': '成功清除所有成績資料'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/scores/upload', methods=['POST'])
+def upload_scores():
+    try:
+        current_app.logger.info("開始處理成績上傳請求")
+        
+        if 'file' not in request.files:
+            current_app.logger.error("未找到上傳的文件")
+            return jsonify({'error': '未找到文件'}), 400
+            
+        file = request.files['file']
+        tournament_id = request.form.get('tournament_id')
+        
+        current_app.logger.info(f"接收到的文件名: {file.filename}")
+        current_app.logger.info(f"賽事ID: {tournament_id}")
+        
+        if not tournament_id:
+            current_app.logger.error("未提供賽事ID")
+            return jsonify({'error': '未提供賽事ID'}), 400
+            
+        if file.filename == '':
+            current_app.logger.error("未選擇文件")
+            return jsonify({'error': '未選擇文件'}), 400
+            
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            current_app.logger.error(f"不支持的文件格式: {file.filename}")
+            return jsonify({'error': '不支持的文件格式'}), 400
+            
+        # 保存文件到臨時目錄
+        temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
+        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+        file.save(temp_path)
+        
+        # 讀取Excel文件
+        current_app.logger.info("開始讀取Excel文件")
+        try:
+            # 嘗試使用 openpyxl 引擎
+            try:
+                df = pd.read_excel(temp_path, engine='openpyxl')
+            except Exception as e1:
+                current_app.logger.warning(f"使用 openpyxl 引擎失敗: {str(e1)}")
+                # 如果失敗，嘗試使用 xlrd 引擎
+                try:
+                    df = pd.read_excel(temp_path, engine='xlrd')
+                except Exception as e2:
+                    current_app.logger.warning(f"使用 xlrd 引擎失敗: {str(e2)}")
+                    # 最後嘗試不指定引擎
+                    df = pd.read_excel(temp_path)
+            
+            current_app.logger.info(f"Excel列名: {df.columns.tolist()}")
+            
+            # 清理臨時文件
+            os.remove(temp_path)
+            
+        except Exception as e:
+            current_app.logger.error(f"讀取Excel文件失敗: {str(e)}")
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return jsonify({'error': '讀取Excel文件失敗', 'details': str(e)}), 400
+        
+        # 列名映射（支持多種可能的列名）
+        column_mappings = {
+            '會員編號': ['會員編號', '會員號碼', 'Member No', 'MemberNo'],
+            'HOLE': ['HOLE', 'HOLE NAME', '全名', 'Full Name'],
+            '姓名': ['姓名', '中文姓名', 'Name', 'Chinese Name'],
+            '淨桿名次': ['淨桿名次', '名次', 'Rank', 'Net Rank'],
+            '總桿數': ['總桿數', '總桿', 'Gross Score', 'Total'],
+            '前次差點': ['前次差點', '原差點', 'Previous Handicap', 'Old Handicap'],
+            '淨桿桿數': ['淨桿桿數', '淨桿', 'Net Score'],
+            '差點增減': ['差點增減', '差點增减', '增減', '增减', '差點增減值', 'Handicap Change'],
+            '新差點': ['新差點', '新的差點', 'New Handicap'],
+            '積分': ['積分', 'Points', 'Score']
+        }
+        
+        # 檢查每個必要的列是否存在（使用映射）
+        missing_columns = []
+        column_map = {}  # 存儲實際使用的列名映射
+        
+        for required_col, possible_names in column_mappings.items():
+            found = False
+            for name in possible_names:
+                if name in df.columns:
+                    column_map[required_col] = name
+                    found = True
+                    break
+            if not found:
+                missing_columns.append(required_col)
+        
+        if missing_columns:
+            current_app.logger.error(f"缺少必要的列: {missing_columns}")
+            return jsonify({
+                'error': f'缺少必要的列: {", ".join(missing_columns)}',
+                'found_columns': df.columns.tolist()  # 返回找到的列名，以便調試
+            }), 400
+            
+        # 重命名列以統一處理
+        df = df.rename(columns={v: k for k, v in column_map.items()})
+            
+        # 刪除該賽事的現有成績
+        current_app.logger.info(f"刪除賽事ID {tournament_id} 的現有成績")
+        Score.query.filter_by(tournament_id=tournament_id).delete()
+        
+        # 添加新的成績記錄
+        current_app.logger.info("開始添加新的成績記錄")
+        for index, row in df.iterrows():
+            try:
+                current_app.logger.info(f"處理第 {index + 1} 行數據")
+                current_app.logger.info(f"行數據: {row.to_dict()}")
+                
+                # 數據預處理和驗證
+                member_number = str(row['會員編號']).strip()
+                if not member_number or len(member_number) > 4:
+                    raise ValueError(f"無效的會員編號: {member_number}")
+                
+                # 檢查會員編號格式
+                if not (member_number[0].isalpha() and member_number[1:].isdigit() and len(member_number[1:]) <= 3):
+                    raise ValueError(f"會員編號格式錯誤（應為一個英文字母+最多三位數字）: {member_number}")
+                
+                full_name = str(row['HOLE']).strip() if pd.notna(row['HOLE']) else None
+                chinese_name = str(row['姓名']).strip() if pd.notna(row['姓名']) else None
+                
+                # 處理數值欄位
+                try:
+                    rank = int(row['淨桿名次']) if pd.notna(row['淨桿名次']) else None
+                    gross_score = int(row['總桿數']) if pd.notna(row['總桿數']) else None
+                except ValueError as e:
+                    raise ValueError(f"淨桿名次或總桿數必須為整數")
+                
+                # 處理浮點數欄位，確保最多2位小數
+                try:
+                    previous_handicap = round(float(row['前次差點']), 2) if pd.notna(row['前次差點']) else None
+                    net_score = round(float(row['淨桿桿數']), 2) if pd.notna(row['淨桿桿數']) else None
+                    handicap_change = round(float(row['差點增減']), 2) if pd.notna(row['差點增減']) else None
+                    new_handicap = round(float(row['新差點']), 2) if pd.notna(row['新差點']) else None
+                except ValueError as e:
+                    raise ValueError(f"差點相關欄位必須為數值")
+                
+                try:
+                    points = int(row['積分']) if pd.notna(row['積分']) else None
+                except ValueError as e:
+                    raise ValueError(f"積分必須為整數")
+                
+                # 創建成績記錄
+                score = Score(
+                    tournament_id=tournament_id,
+                    member_number=member_number,
+                    full_name=full_name,
+                    chinese_name=chinese_name,
+                    rank=rank,
+                    gross_score=gross_score,
+                    previous_handicap=previous_handicap,
+                    net_score=net_score,
+                    handicap_change=handicap_change,
+                    new_handicap=new_handicap,
+                    points=points
+                )
+                
+                db.session.add(score)
+                current_app.logger.info(f"成功添加第 {index + 1} 行數據")
+                
+            except Exception as row_error:
+                current_app.logger.error(f"處理第 {index + 1} 行數據時發生錯誤: {str(row_error)}")
+                current_app.logger.error(f"行數據: {row.to_dict()}")
+                db.session.rollback()
+                return jsonify({
+                    'error': f'處理第 {index + 1} 行數據時發生錯誤',
+                    'details': str(row_error)
+                }), 400
+            
+        current_app.logger.info("提交所有更改到數據庫")
+        db.session.commit()
+        current_app.logger.info("成績上傳成功")
+        return jsonify({'message': '成績上傳成功'})
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"上傳成績時發生錯誤: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': '上傳成績失敗',
+            'details': str(e)
+        }), 500

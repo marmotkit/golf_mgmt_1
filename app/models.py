@@ -11,6 +11,7 @@ class Member(db.Model):
     member_number = db.Column(db.String(32), unique=True)
     is_guest = db.Column(db.Boolean, default=False)  # 會員/來賓
     is_admin = db.Column(db.Boolean, default=False)
+    gender = db.Column(db.String(1))  # 'M' for male, 'F' for female
     handicap = db.Column(db.Float)  # 最新差點
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -26,6 +27,7 @@ class Member(db.Model):
             'member_number': str(self.member_number) if self.member_number else None,
             'is_guest': bool(self.is_guest),
             'is_admin': bool(self.is_admin),
+            'gender': self.gender,
             'handicap': float(self.handicap) if self.handicap is not None else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
@@ -94,43 +96,41 @@ class Tournament(db.Model):
 class Score(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
-    member_id = db.Column(db.Integer, db.ForeignKey('member.id'), nullable=False)
-    member_number = db.Column(db.String(4))  # 會員編號：一位英文字母+最多3位數字
-    full_name = db.Column(db.String(128))    # HOLE: 姓名全名
-    chinese_name = db.Column(db.String(64))   # 姓名：中文姓名
-    net_rank = db.Column(db.Integer)         # 淨桿名次
-    gross_score = db.Column(db.Integer)      # 總桿數
-    previous_handicap = db.Column(db.Float)   # 前次差點
-    net_score = db.Column(db.Float)          # 淨桿桿數
-    handicap_change = db.Column(db.Float)     # 差點新增
-    new_handicap = db.Column(db.Float)       # 新差點
-    points = db.Column(db.Integer)           # 積分
+    member_number = db.Column(db.String(4), nullable=False)  # 一個英文字母+最多三位數字
+    full_name = db.Column(db.String(128))  # HOLE：中英文姓名
+    chinese_name = db.Column(db.String(64))  # 姓名：中文姓名
+    rank = db.Column(db.Integer)  # 淨桿名次：整數
+    gross_score = db.Column(db.Integer)  # 總桿數：整數
+    previous_handicap = db.Column(db.Float(precision=2))  # 前次差點：最多小數點2位
+    net_score = db.Column(db.Float(precision=2))  # 淨桿桿數：最多小數點2位
+    handicap_change = db.Column(db.Float(precision=2))  # 差點增減：最多小數點2位
+    new_handicap = db.Column(db.Float(precision=2))  # 新差點：最多小數點2位
+    points = db.Column(db.Integer)  # 積分：整數
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    tournament = db.relationship('Tournament', backref=db.backref('scores', lazy=True))
+
     def to_dict(self):
         """將成績數據轉換為字典格式"""
         return {
             'id': self.id,
             'tournament_id': self.tournament_id,
-            'member_id': self.member_id,
             'member_number': self.member_number,
-            'full_name': self.full_name,
-            'chinese_name': self.chinese_name,
-            'net_rank': self.net_rank,
+            'full_name': self.full_name,  # HOLE
+            'chinese_name': self.chinese_name,  # 姓名
+            'rank': self.rank,
             'gross_score': self.gross_score,
-            'previous_handicap': round(self.previous_handicap, 2) if self.previous_handicap is not None else None,
-            'net_score': round(self.net_score, 2) if self.net_score is not None else None,
-            'handicap_change': round(self.handicap_change, 2) if self.handicap_change is not None else None,
-            'new_handicap': round(self.new_handicap, 2) if self.new_handicap is not None else None,
-            'points': self.points,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'previous_handicap': round(float(self.previous_handicap), 2) if self.previous_handicap is not None else None,
+            'net_score': round(float(self.net_score), 2) if self.net_score is not None else None,
+            'handicap_change': round(float(self.handicap_change), 2) if self.handicap_change is not None else None,
+            'new_handicap': round(float(self.new_handicap), 2) if self.new_handicap is not None else None,
+            'points': self.points
         }
 
     def from_dict(self, data):
         """從字典格式更新成績數據"""
-        fields = ['member_number', 'full_name', 'chinese_name', 'net_rank', 
+        fields = ['member_number', 'full_name', 'chinese_name', 'rank', 
                  'gross_score', 'previous_handicap', 'net_score', 
                  'handicap_change', 'new_handicap', 'points']
         for field in fields:
@@ -150,23 +150,23 @@ class MemberVersion(db.Model):
         return f'<MemberVersion {self.member_id}-{self.version}>'
 
 class YearlyChampion(db.Model):
+    __tablename__ = 'yearly_champions'
+    
     id = db.Column(db.Integer, primary_key=True)
-    tournament_name = db.Column(db.String(128), nullable=False)
-    player_name = db.Column(db.String(64), nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    tournament_name = db.Column(db.String(100), nullable=False)
+    member_name = db.Column(db.String(100), nullable=False)
     total_strokes = db.Column(db.Integer, nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def to_dict(self):
         return {
             'id': self.id,
+            'year': self.year,
             'tournament_name': self.tournament_name,
-            'player_name': self.player_name,
+            'member_name': self.member_name,
             'total_strokes': self.total_strokes,
-            'date': self.date.isoformat() if self.date else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+            'date': self.date.isoformat() if self.date else None
         }
 
     @staticmethod
@@ -177,3 +177,35 @@ class YearlyChampion(db.Model):
             total_strokes=data.get('total_strokes'),
             date=datetime.fromisoformat(data.get('date')) if data.get('date') else datetime.utcnow()
         )
+
+class Announcement(db.Model):
+    __tablename__ = 'announcements'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
+class SystemConfig(db.Model):
+    __tablename__ = 'system_configs'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'key': self.key,
+            'value': self.value,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

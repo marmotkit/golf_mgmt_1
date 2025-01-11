@@ -1,225 +1,270 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Tab,
+  Tabs,
   Typography,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Container,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-  CircularProgress,
 } from '@mui/material';
-import { UploadFile } from '@mui/icons-material';
+import { DataGrid } from '@mui/x-data-grid';
 import axios from '../utils/axios';
 
-function Scores() {
-  const [tournaments, setTournaments] = useState([]);
-  const [selectedTournament, setSelectedTournament] = useState('');
-  const [scores, setScores] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+function TabPanel(props) {
+  const { children, value, index, ...other } = props;
 
-  // 表格欄位定義
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
+      {...other}
+    >
+      {value === index && (
+        <Box sx={{ p: 3 }}>
+          {children}
+        </Box>
+      )}
+    </div>
+  );
+}
+
+function Scores() {
+  const [value, setValue] = useState(0);
+  const [tournaments, setTournaments] = useState([]);
+  const [selectedTournament, setSelectedTournament] = useState(null);
+  const [scores, setScores] = useState([]);
+  const [openUploadDialog, setOpenUploadDialog] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+
   const columns = [
-    { field: 'member_number', headerName: '會員編號', width: 100 },
+    { field: 'member_number', headerName: '會員編號', width: 120 },
     { field: 'full_name', headerName: 'HOLE', width: 200 },
     { field: 'chinese_name', headerName: '姓名', width: 120 },
-    { field: 'net_rank', headerName: '淨桿名次', width: 100, type: 'number' },
+    { field: 'rank', headerName: '淨桿名次', width: 100, type: 'number' },
     { field: 'gross_score', headerName: '總桿數', width: 100, type: 'number' },
-    { field: 'previous_handicap', headerName: '前次差點', width: 100, type: 'number',
-      valueFormatter: (params) => params.value ? params.value.toFixed(2) : '' },
-    { field: 'net_score', headerName: '淨桿桿數', width: 100, type: 'number',
-      valueFormatter: (params) => params.value ? params.value.toFixed(2) : '' },
-    { field: 'handicap_change', headerName: '差點增減', width: 100, type: 'number',
-      valueFormatter: (params) => params.value ? params.value.toFixed(2) : '' },
-    { field: 'new_handicap', headerName: '新差點', width: 100, type: 'number',
-      valueFormatter: (params) => params.value ? params.value.toFixed(2) : '' },
-    { field: 'points', headerName: '積分', width: 80, type: 'number' },
+    { 
+      field: 'previous_handicap', 
+      headerName: '前次差點', 
+      width: 100,
+      type: 'number',
+      valueFormatter: (params) => {
+        if (params.value == null) return '';
+        return params.value.toFixed(1);
+      }
+    },
+    { 
+      field: 'net_score', 
+      headerName: '淨桿桿數', 
+      width: 100,
+      type: 'number',
+      valueFormatter: (params) => {
+        if (params.value == null) return '';
+        return params.value.toFixed(1);
+      }
+    },
+    { 
+      field: 'handicap_change', 
+      headerName: '差點增減', 
+      width: 100,
+      type: 'number',
+      valueFormatter: (params) => {
+        if (params.value == null) return '';
+        return params.value.toFixed(2);
+      }
+    },
+    { 
+      field: 'new_handicap', 
+      headerName: '新差點', 
+      width: 100,
+      type: 'number',
+      valueFormatter: (params) => {
+        if (params.value == null) return '';
+        return params.value.toFixed(2);
+      }
+    },
+    { field: 'points', headerName: '積分', width: 100, type: 'number' }
   ];
 
-  // 載入賽事列表
   useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const response = await axios.get('/api/tournaments');
-        setTournaments(response.data);
-      } catch (err) {
-        setError('載入賽事列表失敗');
-        console.error('Error fetching tournaments:', err);
-      }
-    };
     fetchTournaments();
   }, []);
 
-  // 載入選定賽事的成績
   useEffect(() => {
-    const fetchScores = async () => {
-      if (!selectedTournament) return;
-      
-      setLoading(true);
-      try {
-        const response = await axios.get(`/api/scores?tournament_id=${selectedTournament}`);
-        setScores(response.data);
-        setError(null);
-      } catch (err) {
-        setError('載入成績失敗');
-        console.error('Error fetching scores:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchScores();
+    if (selectedTournament) {
+      fetchScores(selectedTournament.id);
+    }
   }, [selectedTournament]);
 
-  // 處理檔案上傳
-  const handleFileUpload = async (event) => {
-    if (!selectedTournament) {
-      setError('請先選擇賽事');
-      return;
+  const fetchTournaments = async () => {
+    try {
+      const response = await axios.get('/api/tournaments');
+      setTournaments(response.data);
+    } catch (error) {
+      console.error('Error fetching tournaments:', error);
     }
+  };
 
-    const file = event.target.files[0];
-    if (!file) return;
+  const fetchScores = async (tournamentId) => {
+    try {
+      const response = await axios.get(`/api/scores?tournament_id=${tournamentId}`);
+      const scoresWithId = response.data.map((score, index) => ({
+        ...score,
+        id: index,
+      }));
+      setScores(scoresWithId);
+    } catch (error) {
+      console.error('Error fetching scores:', error);
+    }
+  };
+
+  const handleTabChange = (event, newValue) => {
+    setValue(newValue);
+  };
+
+  const handleTournamentSelect = (tournament) => {
+    setSelectedTournament(tournament);
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !selectedTournament) return;
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', selectedFile);
+    formData.append('tournament_id', selectedTournament.id);
 
-    setLoading(true);
     try {
-      const response = await axios.post(
-        `/api/scores/import/${selectedTournament}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      
-      // 處理警告信息
-      if (response.data.warnings && response.data.warnings.length > 0) {
-        const warningMessages = response.data.warnings
-          .map(w => `第 ${w.row} 行: ${w.error}`)
-          .join('\n');
-        setError(`匯入完成，但有以下警告：\n${warningMessages}`);
+      const response = await axios.post('/api/scores/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      setOpenUploadDialog(false);
+      setSelectedFile(null);
+      fetchScores(selectedTournament.id);
+    } catch (error) {
+      console.error('Error uploading scores:', error);
+      if (error.response) {
+        console.error('Error details:', error.response.data);
+        alert(`上傳失敗: ${error.response.data.error}\n${error.response.data.details || ''}`);
       } else {
-        setSuccess(response.data.message || '成績匯入成功');
-        setError(null);
+        alert('上傳失敗：請檢查文件格式是否正確');
       }
-      
-      // 重新載入成績
-      const scoresResponse = await axios.get(`/api/scores?tournament_id=${selectedTournament}`);
-      setScores(scoresResponse.data);
-    } catch (err) {
-      console.error('Error details:', err.response?.data);
-      setError(err.response?.data?.error || err.response?.data?.details || err.message || '匯入成績失敗');
-    } finally {
-      setLoading(false);
-      // 清除檔案選擇
-      event.target.value = '';
+    }
+  };
+
+  const handleClearScores = async () => {
+    try {
+      await axios.post('/api/scores/clear');
+      alert('成績資料已清除');
+      if (selectedTournament) {
+        fetchScores(selectedTournament.id);
+      }
+    } catch (error) {
+      console.error('Error clearing scores:', error);
+      alert('清除成績資料失敗');
     }
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" sx={{ mb: 3 }}>成績管理</Typography>
-      
-      {/* 賽事選擇 */}
-      <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>選擇賽事</InputLabel>
-          <Select
-            value={selectedTournament}
-            label="選擇賽事"
-            onChange={(e) => setSelectedTournament(e.target.value)}
-          >
-            {tournaments.map((tournament) => (
-              <MenuItem key={tournament.id} value={tournament.id}>
-                {tournament.name} ({tournament.date})
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        {/* 檔案上傳 */}
-        <Button
-          variant="contained"
-          component="label"
-          startIcon={<UploadFile />}
-          disabled={!selectedTournament || loading}
-        >
-          匯入成績
-          <input
-            type="file"
-            hidden
-            onChange={handleFileUpload}
-          />
-        </Button>
-      </Box>
-
-      {/* 錯誤訊息 */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* 成功訊息 */}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
-          {success}
-        </Alert>
-      )}
-
-      {/* 載入中指示器 */}
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-          <CircularProgress />
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Paper sx={{ width: '100%', mb: 2 }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs value={value} onChange={handleTabChange}>
+            <Tab label="賽事成績" />
+            <Tab label="年度總成績" />
+          </Tabs>
         </Box>
-      )}
 
-      {/* 成績表格 */}
-      {selectedTournament && scores.length > 0 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                {columns.map((column) => (
-                  <TableCell key={column.field}>{column.headerName}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {scores.map((score) => (
-                <TableRow key={score.id}>
-                  {columns.map((column) => (
-                    <TableCell key={column.field} align={column.align}>
-                      {column.valueFormatter ? column.valueFormatter({ value: score[column.field] }) : score[column.field]}
-                    </TableCell>
-                  ))}
-                </TableRow>
+        <TabPanel value={value} index={0}>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              選擇賽事
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              {tournaments.map((tournament) => (
+                <Button
+                  key={tournament.id}
+                  variant={selectedTournament?.id === tournament.id ? 'contained' : 'outlined'}
+                  onClick={() => handleTournamentSelect(tournament)}
+                >
+                  {tournament.name}
+                </Button>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+            </Box>
+          </Box>
 
-      {/* 無資料提示 */}
-      {selectedTournament && !loading && scores.length === 0 && (
-        <Typography variant="body1" sx={{ textAlign: 'center', my: 3 }}>
-          尚無成績資料
-        </Typography>
-      )}
-    </Box>
+          {selectedTournament && (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  {selectedTournament.name} 成績表
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleClearScores}
+                  >
+                    清除所有成績
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenUploadDialog(true)}
+                  >
+                    匯入成績
+                  </Button>
+                </Box>
+              </Box>
+
+              <Box sx={{ height: 400, width: '100%' }}>
+                <DataGrid
+                  rows={scores}
+                  columns={columns}
+                  pageSize={5}
+                  rowsPerPageOptions={[5]}
+                  disableSelectionOnClick
+                />
+              </Box>
+            </>
+          )}
+        </TabPanel>
+
+        <TabPanel value={value} index={1}>
+          <Typography variant="h6" gutterBottom>
+            年度總成績匯總表
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            此功能正在開發中...
+          </Typography>
+        </TabPanel>
+      </Paper>
+
+      <Dialog open={openUploadDialog} onClose={() => setOpenUploadDialog(false)}>
+        <DialogTitle>上傳成績檔案</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <input
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={(e) => setSelectedFile(e.target.files[0])}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenUploadDialog(false)}>取消</Button>
+          <Button onClick={handleFileUpload} variant="contained" disabled={!selectedFile}>
+            上傳
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 }
 
