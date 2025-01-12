@@ -7,24 +7,31 @@ services:
       pip install -r requirements.txt
       echo "建置完成"
     startCommand: |
+      echo "執行資料庫遷移..."
+      flask db upgrade
+      
       echo "設置環境變數..."
       export FLASK_APP=run.py
       export PYTHONPATH=$PWD
       
       echo "啟動應用程式..."
-      PYTHONUNBUFFERED=1 gunicorn run:app
+      PYTHONUNBUFFERED=1 gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: SECRET_KEY
-        sync: false
+        generateValue: true
       - key: FLASK_DEBUG
         value: 0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: golf-mgmt-db
+          property: connectionString
 
 databases:
   - name: golf-mgmt-db
     databaseName: golf_mgmt
     user: golf_mgmt
-    region: singapore  # 指定區域
-    ipAllowList: []  # 允許所有 IP 訪問
-    plan: free 
+    region: singapore
+    ipAllowList: []
+    plan: free

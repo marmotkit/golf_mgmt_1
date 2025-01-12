@@ -1,13 +1,15 @@
 import multiprocessing
+import os
 
 # 工作進程數
-workers = multiprocessing.cpu_count() * 2 + 1
+workers = 2  # Render Free Tier 建議使用較少的 workers
 
 # 每個工作進程的線程數
 threads = 2
 
 # 監聽地址和端口
-bind = "0.0.0.0:10000"
+port = os.getenv('PORT', '10000')
+bind = f"0.0.0.0:{port}"
 
 # 超時設置
 timeout = 120
