@@ -1,15 +1,19 @@
 import axios from 'axios';
 
-// 從環境變量中獲取 API URL，如果未定義則使用默認值
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-console.log('API URL:', API_URL); // 添加日誌以便調試
+// 根據環境決定基礎 URL
+const baseURL = process.env.NODE_ENV === 'production' 
+  ? 'https://golf-mgmt-api.onrender.com/api'
+  : 'http://localhost:5000/api';
+
+console.log('Current environment:', process.env.NODE_ENV);
+console.log('Base URL:', baseURL);
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 設置超時時間為 10 秒
+  timeout: 10000,
 });
 
 // 添加請求攔截器

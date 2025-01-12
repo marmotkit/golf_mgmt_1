@@ -8,12 +8,19 @@
       "destination": "/index.html"
     }
   ],
-  "env": {
-    "VITE_API_URL": "https://golf-mgmt-api.onrender.com"
-  },
-  "build": {
-    "env": {
-      "VITE_API_URL": "https://golf-mgmt-api.onrender.com"
+  "headers": [
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        }
+      ]
     }
-  }
+  ]
 } 
