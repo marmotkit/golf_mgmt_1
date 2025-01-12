@@ -12,12 +12,28 @@ def init_db():
         print('資料庫連接成功')
         
         print('執行初始化腳本...')
-        import init_db
-        print('資料庫初始化完成')
+        from app.models import SystemConfig
+        
+        # 檢查是否需要初始化系統配置
+        if not SystemConfig.query.first():
+            print('初始化系統配置...')
+            version = SystemConfig(
+                key='version',
+                value='1.0.0',
+                description='系統版本'
+            )
+            db.session.add(version)
+            db.session.commit()
+            print('系統配置初始化完成')
+        else:
+            print('系統配置已存在，跳過初始化')
+            
     except Exception as e:
         print(f'錯誤: {str(e)}')
         raise
 
+# 在應用啟動時初始化資料庫
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     app.run()
