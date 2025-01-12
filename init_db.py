@@ -1,12 +1,18 @@
 from app import create_app, db
 from app.models import SystemConfig
 from datetime import datetime
+import os
 
 app = create_app()
 
 with app.app_context():
+    # 打印資料庫連接信息
+    print("使用的資料庫 URL:", app.config['SQLALCHEMY_DATABASE_URI'])
+    print("環境變數 DATABASE_URL:", os.environ.get('DATABASE_URL'))
+    
     # 確保表已創建
     db.create_all()
+    print("資料庫表格已創建")
     
     # 檢查是否已存在版本信息
     version_config = SystemConfig.query.filter_by(key='version').first()
@@ -18,6 +24,7 @@ with app.app_context():
             updated_at=datetime.utcnow()
         )
         db.session.add(version_config)
+        print("添加版本信息")
     
     # 檢查是否已存在版本描述
     version_desc = SystemConfig.query.filter_by(key='version_description').first()
@@ -29,7 +36,8 @@ with app.app_context():
             updated_at=datetime.utcnow()
         )
         db.session.add(version_desc)
+        print("添加版本描述")
     
     # 提交更改
     db.session.commit()
-    print("Database initialized successfully!")
+    print("資料庫初始化成功!")
