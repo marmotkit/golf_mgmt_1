@@ -16,8 +16,16 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: DATABASE_URL
-        value: sqlite:///app.db
+        fromDatabase:
+          name: golf-mgmt-db
+          property: connectionString
       - key: SECRET_KEY
         sync: false
       - key: FLASK_DEBUG
-        value: 0 
+        value: 0
+
+databases:
+  - name: golf-mgmt-db
+    databaseName: golf_mgmt
+    user: golf_mgmt
+    plan: free 
