@@ -15,9 +15,14 @@ def create_app(config_class=Config):
     # 配置 CORS
     CORS(app, resources={
         r"/api/*": {
-            "origins": ["http://localhost:3000", "https://golf-mgmt-1.onrender.com"],
+            "origins": [
+                "http://localhost:3000",
+                "https://golf-mgmt-1.onrender.com",
+                "https://golf-mgmt-1.app.render.com"
+            ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
+            "allow_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True
         }
     })
 
