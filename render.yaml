@@ -2,14 +2,16 @@ services:
   - type: web
     name: golf-mgmt-api
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      pip install -r requirements.txt
+      flask db upgrade
     startCommand: gunicorn run:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: DATABASE_URL
-        sync: false  # 這將在 Render 儀表板中手動設置
+        value: sqlite:///app.db
       - key: SECRET_KEY
-        generateValue: true  # 這會自動生成一個安全的密鑰
+        sync: false
       - key: FLASK_DEBUG
         value: 0 
