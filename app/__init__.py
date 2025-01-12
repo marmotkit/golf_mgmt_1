@@ -12,10 +12,19 @@ def create_app(config_class=Config):
     app = Flask(__name__, static_folder='../frontend/build', static_url_path='/')
     app.config.from_object(config_class)
 
+    # 配置 CORS
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["http://localhost:3000", "https://golf-mgmt-1.onrender.com"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
+
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app)
 
+    # 註冊 API 藍圖
     from app.api import members, tournaments, scores, games, reports, dashboard
     app.register_blueprint(members.bp, url_prefix='/api', name='members_api')
     app.register_blueprint(tournaments.bp, url_prefix='/api', name='tournaments_api')
