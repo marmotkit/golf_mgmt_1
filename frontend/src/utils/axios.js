@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-// 根據環境決定基礎 URL
-const baseURL = process.env.NODE_ENV === 'production' 
+// 根據當前主機名判斷環境
+const isProduction = window.location.hostname !== 'localhost';
+const baseURL = isProduction
   ? 'https://golf-mgmt-api.onrender.com/api'
   : 'http://localhost:5000/api';
 
-console.log('Current environment:', process.env.NODE_ENV);
+console.log('Is Production:', isProduction);
 console.log('Base URL:', baseURL);
 
 const api = axios.create({
