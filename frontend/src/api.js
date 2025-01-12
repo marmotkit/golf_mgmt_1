@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 // 根據環境決定基礎 URL
-const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
-  baseURL,
+  baseURL: `${baseURL}/api`,
   timeout: 10000,
 });
 
