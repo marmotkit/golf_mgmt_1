@@ -10,21 +10,35 @@ services:
       echo "開始資料庫初始化..."
       export FLASK_APP=run.py
       export PYTHONPATH=$PWD
-      python -c "
+      
+      cat > init_db_temp.py << 'EOF'
+      import os
       from flask_migrate import upgrade
-      print('執行資料庫遷移...')
-      upgrade()
-      print('資料庫遷移完成')
-      
       from app import db
-      print('檢查資料庫連接...')
-      db.engine.connect()
-      print('資料庫連接成功')
       
-      print('執行初始化腳本...')
-      "
-      python init_db.py
-      echo "資料庫初始化完成"
+      def init_db():
+          try:
+              print('執行資料庫遷移...')
+              upgrade()
+              print('資料庫遷移完成')
+              
+              print('檢查資料庫連接...')
+              db.engine.connect()
+              print('資料庫連接成功')
+              
+              print('執行初始化腳本...')
+              import init_db
+              print('資料庫初始化完成')
+          except Exception as e:
+              print(f'錯誤: {str(e)}')
+              raise
+      
+      if __name__ == '__main__':
+          init_db()
+      EOF
+      
+      python init_db_temp.py
+      rm init_db_temp.py
     startCommand: gunicorn run:app
     envVars:
       - key: PYTHON_VERSION
