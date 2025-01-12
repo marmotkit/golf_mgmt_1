@@ -12,7 +12,7 @@ services:
       export PYTHONPATH=$PWD
       
       echo "執行資料庫遷移..."
-      python -c "from run import app; from flask_migrate import upgrade; app.app_context().push(); upgrade()"
+      python migrate.py
       
       echo "啟動應用程式..."
       PYTHONUNBUFFERED=1 gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
