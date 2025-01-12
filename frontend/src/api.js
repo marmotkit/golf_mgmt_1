@@ -1,13 +1,17 @@
 import axios from 'axios';
 
+// 根據環境決定基礎 URL
+const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL,
   timeout: 10000,
 });
 
 // 請求攔截器
 api.interceptors.request.use(
   (config) => {
+    console.log('API Request:', config.method.toUpperCase(), config.url);
     return config;
   },
   (error) => {
@@ -19,14 +23,19 @@ api.interceptors.request.use(
 // 響應攔截器
 api.interceptors.response.use(
   (response) => {
-    return response;
+    return response.data;
   },
   (error) => {
-    console.log('Response Error:', error);
     if (error.response) {
-      console.log('Error Data:', error.response.data);
-      console.log('Error Status:', error.response.status);
-      console.log('Error Headers:', error.response.headers);
+      console.error('Response Error:', {
+        data: error.response.data,
+        status: error.response.status,
+        headers: error.response.headers,
+      });
+    } else if (error.request) {
+      console.error('Request Error:', error.request);
+    } else {
+      console.error('Error:', error.message);
     }
     return Promise.reject(error);
   }
