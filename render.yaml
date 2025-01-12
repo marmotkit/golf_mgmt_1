@@ -6,7 +6,7 @@ services:
       echo "開始安裝依賴..."
       pip install -r requirements.txt
       echo "建置完成"
-      
+    preDeployCommand: |
       echo "開始資料庫初始化..."
       echo "當前目錄: $PWD"
       echo "列出目錄內容:"
@@ -17,7 +17,7 @@ services:
       export PYTHONPATH=$PWD
       
       echo "執行初始化腳本..."
-      PYTHONUNBUFFERED=1 python init_render.py
+      PYTHONUNBUFFERED=1 python init_render.py || exit 1
       
       echo "資料庫初始化流程完成"
     startCommand: gunicorn run:app
