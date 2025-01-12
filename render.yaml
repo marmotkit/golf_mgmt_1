@@ -6,36 +6,7 @@ services:
       echo "開始安裝依賴..."
       pip install -r requirements.txt
       echo "建置完成"
-    startCommand: |
-      python - << EOF
-      import os
-      import subprocess
-      
-      print("當前目錄:", os.getcwd())
-      print("列出目錄內容:")
-      subprocess.run(["ls", "-la"])
-      
-      print("\n設置環境變數...")
-      os.environ["FLASK_APP"] = "run.py"
-      os.environ["PYTHONPATH"] = os.getcwd()
-      
-      print("\n開始執行資料庫遷移...")
-      from flask_migrate import upgrade
-      upgrade()
-      print("資料庫遷移完成")
-      
-      print("\n開始初始化資料庫...")
-      print("檢查資料庫連接...")
-      from app import db
-      db.engine.connect()
-      print("資料庫連接成功")
-      
-      print("\n執行初始化腳本...")
-      subprocess.run(["python", "init_db.py"], check=True)
-      print("資料庫初始化完成")
-      EOF
-      
-      exec gunicorn run:app
+    startCommand: python start.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
