@@ -15,8 +15,21 @@ migrate = Migrate(app, db)
 cors = CORS(app)
 jwt = JWTManager(app)
 
-# 導入路由和模型
-from app import routes, models
-
 # 確保導出 app 實例
 __all__ = ['app', 'db']
+
+# 在所有初始化完成後導入路由和模型
+from app import models  # 先導入模型
+from app.api import members, tournaments, scores, games, reports, dashboard  # 然後導入路由
+
+# 註冊藍圖
+app.register_blueprint(members.bp, url_prefix='/api')
+app.register_blueprint(tournaments.bp, url_prefix='/api')
+app.register_blueprint(scores.bp, url_prefix='/api')
+app.register_blueprint(games.bp, url_prefix='/api')
+app.register_blueprint(reports.bp, url_prefix='/api')
+app.register_blueprint(dashboard.bp, url_prefix='/api')
+
+@app.route('/health')
+def health_check():
+    return {'status': 'healthy'}
