@@ -1,5 +1,8 @@
-from app import app, db
+from app import create_app, db
 from flask_migrate import upgrade
+
+app = create_app()
+app.app_context().push()  # 確保應用上下文被推送
 
 def init_db():
     try:
@@ -31,6 +34,10 @@ def init_db():
     except Exception as e:
         print(f'錯誤: {str(e)}')
         raise
+
+@app.route('/health')
+def health_check():
+    return {'status': 'healthy'}
 
 if __name__ == '__main__':
     app.run()
