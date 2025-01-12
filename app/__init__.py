@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -27,13 +27,13 @@ def create_app(config_class=Config):
     def health_check():
         return {'status': 'healthy'}
 
-    @app.route('/')
-    def serve():
-        return send_from_directory(app.static_folder, 'index.html')
-
-    @app.errorhandler(404)
-    def not_found(e):
-        return send_from_directory(app.static_folder, 'index.html')
+    @app.route('/', defaults={'path': ''})
+    @app.route('/<path:path>')
+    def serve(path):
+        if path and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_file(os.path.join(app.static_folder, 'index.html'))
 
     return app
 
