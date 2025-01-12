@@ -16,10 +16,15 @@ services:
       export PYTHONPATH=$PWD
       
       echo "開始執行資料庫遷移..."
-      flask db upgrade
+      python -c "from flask_migrate import upgrade; upgrade()"
       echo "資料庫遷移完成"
       
       echo "開始初始化資料庫..."
+      echo "檢查資料庫連接..."
+      python -c "from app import db; db.engine.connect()"
+      echo "資料庫連接成功"
+      
+      echo "執行初始化腳本..."
       python init_db.py
       echo "資料庫初始化完成"
       
