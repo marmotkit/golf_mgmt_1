@@ -1,7 +1,11 @@
+const isDevelopment = process.env.NODE_ENV === 'development';
+const productionUrl = window.location.origin;
+
 const config = {
-    apiBaseUrl: process.env.NODE_ENV === 'production'
-        ? window.location.origin + '/api'  // 使用當前域名
-        : process.env.REACT_APP_API_URL || 'http://localhost:5000/api'  // 開發環境使用完整 URL
+    apiBaseUrl: isDevelopment ? 'http://localhost:5000/api' : `${productionUrl}/api`
 };
+
+console.log('Current environment:', process.env.NODE_ENV);
+console.log('API Base URL:', config.apiBaseUrl);
 
 export default config;
