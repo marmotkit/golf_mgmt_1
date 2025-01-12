@@ -32,8 +32,5 @@ def init_db():
         print(f'錯誤: {str(e)}')
         raise
 
-# 在應用啟動時初始化資料庫
-init_db()
-
 if __name__ == '__main__':
     app.run()
