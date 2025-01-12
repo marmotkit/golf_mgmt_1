@@ -1,5 +1,9 @@
 #!/bin/bash
 
+echo "當前目錄: $PWD"
+echo "列出目錄內容:"
+ls -la
+
 echo "設置環境變數..."
 export FLASK_APP=run.py
 export PYTHONPATH=$PWD
