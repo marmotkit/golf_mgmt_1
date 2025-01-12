@@ -7,7 +7,9 @@ services:
       pip install -r requirements.txt
       echo "環境變數 DATABASE_URL: $DATABASE_URL"
       echo "開始執行資料庫遷移..."
+      cd $RENDER_PROJECT_DIR
       export FLASK_APP=run.py
+      export PYTHONPATH=$RENDER_PROJECT_DIR
       flask db upgrade
       echo "資料庫遷移完成"
       echo "開始初始化資料庫..."
