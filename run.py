@@ -1,5 +1,6 @@
 from app import create_app, db
 from flask_migrate import upgrade
+from flask import jsonify
 
 app = create_app()
 app.app_context().push()  # 確保應用上下文被推送
@@ -34,6 +35,14 @@ def init_db():
     except Exception as e:
         print(f'錯誤: {str(e)}')
         raise
+
+@app.route('/')
+def index():
+    return jsonify({
+        'message': 'Welcome to Golf Management API',
+        'version': '1.0.0',
+        'status': 'running'
+    })
 
 @app.route('/health')
 def health_check():

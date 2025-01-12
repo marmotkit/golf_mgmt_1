@@ -16,7 +16,15 @@ def create_app(config_class=Config):
     # 初始化擴展
     db.init_app(app)
     migrate = Migrate(app, db)
-    CORS(app)
+    
+    # 配置 CORS
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["https://golf-mgmt.vercel.app", "http://localhost:3000"],
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
     
     # 配置日誌
     if not app.debug and not app.testing:
@@ -39,7 +47,7 @@ def create_app(config_class=Config):
     app.register_blueprint(scores.bp, url_prefix='/api')
     app.register_blueprint(dashboard.dashboard_api, url_prefix='/api/dashboard')
     app.register_blueprint(reports.bp, url_prefix='/api')
-    app.register_blueprint(games.games_api, url_prefix='/api')  # 修改這裡，使用 games_api
+    app.register_blueprint(games.games_api, url_prefix='/api')
     
     return app
 
