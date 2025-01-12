@@ -25,7 +25,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "rimraf build && CI=false GENERATE_SOURCEMAP=false react-scripts build",
+    "build": "REACT_APP_API_URL=https://golf-mgmt-1.onrender.com/api NODE_ENV=production react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
