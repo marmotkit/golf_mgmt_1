@@ -1,20 +1,20 @@
 from flask import jsonify, request
 from app import db
 from app.models import Game, GamePrize
-from app.api import bp
+from app.api import games_api
 from app.api.errors import bad_request
 
-@bp.route('/games', methods=['GET'])
+@games_api.route('/games', methods=['GET'])
 def get_games():
     games = Game.query.order_by(Game.created_at.desc()).all()
     return jsonify([game.to_dict() for game in games])
 
-@bp.route('/games/<int:id>', methods=['GET'])
+@games_api.route('/games/<int:id>', methods=['GET'])
 def get_game(id):
     game = Game.query.get_or_404(id)
     return jsonify(game.to_dict())
 
-@bp.route('/games', methods=['POST'])
+@games_api.route('/games', methods=['POST'])
 def create_game():
     data = request.get_json() or {}
     if 'name' not in data:
@@ -44,7 +44,7 @@ def create_game():
     db.session.commit()
     return jsonify(game.to_dict()), 201
 
-@bp.route('/games/<int:id>', methods=['PUT'])
+@games_api.route('/games/<int:id>', methods=['PUT'])
 def update_game(id):
     game = Game.query.get_or_404(id)
     data = request.get_json() or {}
@@ -61,7 +61,7 @@ def update_game(id):
     db.session.commit()
     return jsonify(game.to_dict())
 
-@bp.route('/games/<int:id>', methods=['DELETE'])
+@games_api.route('/games/<int:id>', methods=['DELETE'])
 def delete_game(id):
     game = Game.query.get_or_404(id)
     db.session.delete(game)
@@ -69,12 +69,12 @@ def delete_game(id):
     return '', 204
 
 # 獎項相關的 API 端點
-@bp.route('/games/<int:game_id>/prizes', methods=['GET'])
+@games_api.route('/games/<int:game_id>/prizes', methods=['GET'])
 def get_game_prizes(game_id):
     game = Game.query.get_or_404(game_id)
     return jsonify([prize.to_dict() for prize in game.prizes])
 
-@bp.route('/games/<int:game_id>/prizes/<int:position>', methods=['PUT'])
+@games_api.route('/games/<int:game_id>/prizes/<int:position>', methods=['PUT'])
 def update_game_prize(game_id, position):
     if position < 0 or position >= 24:
         return bad_request('獎項位置必須在 0-23 之間')

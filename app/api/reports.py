@@ -4,7 +4,7 @@ from sqlalchemy import func
 from app import db
 from datetime import datetime
 
-bp = Blueprint('reports', __name__)
+bp = Blueprint('reports_api', __name__)
 
 @bp.route('/tournaments', methods=['GET'])
 def get_tournaments():

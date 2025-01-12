@@ -1,11 +1,16 @@
 from flask import Blueprint, jsonify, current_app, request
-from app.models import Member, Tournament, YearlyChampion, db, Announcement, SystemConfig
+from app.models import (
+    Member, Tournament, YearlyChampion, 
+    db, Announcement, SystemConfig
+)
 from datetime import datetime
 from sqlalchemy import func
 import traceback
-from app.api import bp
 
-@bp.route('/dashboard/stats', methods=['GET'])
+# Create blueprint with proper API name
+dashboard_api = Blueprint('dashboard_api', __name__)
+
+@dashboard_api.route('/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
     try:
         current_app.logger.info("開始獲取儀表板統計數據")
@@ -59,7 +64,7 @@ def get_dashboard_stats():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions', methods=['GET'])
+@dashboard_api.route('/dashboard/champions', methods=['GET'])
 def get_champions():
     try:
         champions = YearlyChampion.query.order_by(YearlyChampion.date.desc()).all()
@@ -72,7 +77,7 @@ def get_champions():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions', methods=['POST'])
+@dashboard_api.route('/dashboard/champions', methods=['POST'])
 def create_champion():
     try:
         data = request.get_json()
@@ -98,7 +103,7 @@ def create_champion():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions/<int:id>', methods=['PUT'])
+@dashboard_api.route('/dashboard/champions/<int:id>', methods=['PUT'])
 def update_champion(id):
     try:
         champion = YearlyChampion.query.get_or_404(id)
@@ -123,7 +128,7 @@ def update_champion(id):
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions/<int:id>', methods=['DELETE'])
+@dashboard_api.route('/dashboard/champions/<int:id>', methods=['DELETE'])
 def delete_champion(id):
     try:
         champion = YearlyChampion.query.get_or_404(id)
@@ -139,7 +144,7 @@ def delete_champion(id):
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements', methods=['GET'])
+@dashboard_api.route('/dashboard/announcements', methods=['GET'])
 def get_announcements():
     try:
         announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
@@ -152,7 +157,7 @@ def get_announcements():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements', methods=['POST'])
+@dashboard_api.route('/dashboard/announcements', methods=['POST'])
 def create_announcement():
     try:
         data = request.get_json()
@@ -172,7 +177,7 @@ def create_announcement():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements/<int:id>', methods=['PUT'])
+@dashboard_api.route('/dashboard/announcements/<int:id>', methods=['PUT'])
 def update_announcement(id):
     try:
         announcement = Announcement.query.get_or_404(id)
@@ -193,7 +198,7 @@ def update_announcement(id):
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements/<int:id>', methods=['DELETE'])
+@dashboard_api.route('/dashboard/announcements/<int:id>', methods=['DELETE'])
 def delete_announcement(id):
     try:
         announcement = Announcement.query.get_or_404(id)
@@ -209,7 +214,7 @@ def delete_announcement(id):
             'details': str(e)
         }), 500
 
-@bp.route('/version', methods=['GET'])
+@dashboard_api.route('/version', methods=['GET'])
 def get_version():
     try:
         config = SystemConfig.query.filter_by(key='version').first()
@@ -229,7 +234,7 @@ def get_version():
             'details': str(e)
         }), 500
 
-@bp.route('/version', methods=['POST'])
+@dashboard_api.route('/version', methods=['POST'])
 def update_version():
     try:
         data = request.get_json()
@@ -257,7 +262,7 @@ def update_version():
             'details': str(e)
         }), 500
 
-@bp.route('/version/description', methods=['GET'])
+@dashboard_api.route('/version/description', methods=['GET'])
 def get_version_description():
     try:
         config = SystemConfig.query.filter_by(key='version_description').first()
@@ -278,7 +283,7 @@ def get_version_description():
             'details': str(e)
         }), 500
 
-@bp.route('/version/description', methods=['POST'])
+@dashboard_api.route('/version/description', methods=['POST'])
 def update_version_description():
     try:
         data = request.get_json()

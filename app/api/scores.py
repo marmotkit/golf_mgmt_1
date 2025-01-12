@@ -1,10 +1,4 @@
-from flask import Blueprint, jsonify, request
-from app.models import Score, db
-
-bp = Blueprint('scores', __name__)
-# ... 其他路由代碼 ...
-from flask import jsonify, request, current_app
-from app.api import bp
+from flask import Blueprint, jsonify, request, current_app
 from app.models import Score, db, Tournament, Member
 import pandas as pd
 import os
@@ -14,6 +8,9 @@ from openpyxl import load_workbook
 import uuid
 import csv
 from sqlalchemy import func
+
+# 創建藍圖，使用唯一名稱
+bp = Blueprint('scores_api', __name__)
 
 @bp.route('/scores', methods=['GET'])
 def get_scores():

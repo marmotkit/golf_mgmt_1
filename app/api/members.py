@@ -1,18 +1,16 @@
 from flask import Blueprint, jsonify, request, current_app
 from app.models import Member, db
-
-bp = Blueprint('members', __name__)
 from werkzeug.utils import secure_filename
 import pandas as pd
 import os
-from app import db
-from app.models import Member, MemberVersion
-from app.api import bp
 import logging
 import traceback
 from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy import Boolean
+
+# 創建藍圖，使用唯一名稱
+bp = Blueprint('members_api', __name__)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
