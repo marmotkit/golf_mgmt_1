@@ -16,46 +16,8 @@ services:
       export FLASK_APP=run.py
       export PYTHONPATH=$PWD
       
-      echo "創建初始化腳本..."
-      cat > init_db_temp.py << 'EOF'
-      import os
-      import sys
-      from flask_migrate import upgrade
-      from app import db
-      
-      def init_db():
-          try:
-              sys.stdout.write('執行資料庫遷移...\n')
-              sys.stdout.flush()
-              upgrade()
-              sys.stdout.write('資料庫遷移完成\n')
-              sys.stdout.flush()
-              
-              sys.stdout.write('檢查資料庫連接...\n')
-              sys.stdout.flush()
-              db.engine.connect()
-              sys.stdout.write('資料庫連接成功\n')
-              sys.stdout.flush()
-              
-              sys.stdout.write('執行初始化腳本...\n')
-              sys.stdout.flush()
-              import init_db
-              sys.stdout.write('資料庫初始化完成\n')
-              sys.stdout.flush()
-          except Exception as e:
-              sys.stderr.write(f'錯誤: {str(e)}\n')
-              sys.stderr.flush()
-              raise
-      
-      if __name__ == '__main__':
-          init_db()
-      EOF
-      
       echo "執行初始化腳本..."
-      PYTHONUNBUFFERED=1 python init_db_temp.py 2>&1
-      
-      echo "清理臨時文件..."
-      rm init_db_temp.py
+      PYTHONUNBUFFERED=1 python init_render.py
       
       echo "資料庫初始化流程完成"
     startCommand: gunicorn run:app
