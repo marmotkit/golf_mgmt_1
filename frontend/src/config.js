@@ -1,24 +1,13 @@
-// 檢測是否在 Render.com 環境
-const isRenderEnv = Boolean(process.env.RENDER);
-const isDevelopment = process.env.NODE_ENV === 'development';
+// API URL configuration
+const apiBaseUrl = process.env.NODE_ENV === 'production'
+    ? 'https://golf-mgmt-1.onrender.com/api'  // hardcoded production URL
+    : 'http://localhost:5000/api';            // development URL
 
-// 獲取當前完整的主機名
-const currentHost = window.location.origin;
-console.log('Current host:', currentHost);
-
-// 如果在 Render.com 上，使用相對路徑，否則使用環境變量或默認值
-const apiBaseUrl = isDevelopment
-    ? 'http://localhost:5000/api'
-    : isRenderEnv
-        ? '/api'  // 在 Render.com 上使用相對路徑
-        : process.env.REACT_APP_API_URL || '/api';
-
-console.log('Environment:', {
-    NODE_ENV: process.env.NODE_ENV,
-    RENDER: process.env.RENDER,
-    isDevelopment,
-    isRenderEnv,
-    apiBaseUrl
+// Debug logging
+console.log({
+    environment: process.env.NODE_ENV,
+    apiBaseUrl: apiBaseUrl,
+    envApiUrl: process.env.REACT_APP_API_URL
 });
 
 const config = {
