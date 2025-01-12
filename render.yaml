@@ -28,5 +28,6 @@ databases:
   - name: golf-mgmt-db
     databaseName: golf_mgmt
     user: golf_mgmt
+    region: singapore  # 指定區域
     ipAllowList: []  # 允許所有 IP 訪問
     plan: free 
