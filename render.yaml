@@ -5,15 +5,16 @@ services:
     buildCommand: |
       echo "開始安裝依賴..."
       pip install -r requirements.txt
-      echo "建置完成"
-    startCommand: |
+      
       echo "設置環境變數..."
       export FLASK_APP=run.py
       export PYTHONPATH=$PWD
       
       echo "執行資料庫遷移..."
-      python migrate.py
+      FLASK_APP=run.py python -m flask db upgrade
       
+      echo "建置完成"
+    startCommand: |
       echo "啟動應用程式..."
       PYTHONUNBUFFERED=1 gunicorn run:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
