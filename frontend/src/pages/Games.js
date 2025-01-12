@@ -22,10 +22,9 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from '@mui/icons-material';
-import axios from 'axios';
+import axios from '../utils/axios';
+import config from '../config';
 import WheelGame from '../components/WheelGame';
-
-const API_BASE_URL = 'http://localhost:5000';
 
 const GAME_TYPES = [
   { value: 'default', label: '一般遊戲' },
@@ -55,7 +54,7 @@ function Games() {
 
   const fetchGames = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/games`);
+      const response = await axios.get('/games');
       console.log('Fetched games:', response.data);
       setGames(response.data);
     } catch (error) {
@@ -107,9 +106,9 @@ function Games() {
     try {
       let response;
       if (editingGame) {
-        response = await axios.put(`${API_BASE_URL}/api/games/${editingGame.id}`, gameForm);
+        response = await axios.put(`/games/${editingGame.id}`, gameForm);
       } else {
-        response = await axios.post(`${API_BASE_URL}/api/games`, gameForm);
+        response = await axios.post('/games', gameForm);
       }
       console.log('Game saved:', response.data);
       fetchGames();
@@ -133,7 +132,7 @@ function Games() {
     if (!window.confirm('確定要刪除此遊戲嗎？')) return;
 
     try {
-      await axios.delete(`${API_BASE_URL}/api/games/${gameId}`);
+      await axios.delete(`/games/${gameId}`);
       fetchGames();
       setSnackbar({
         open: true,
@@ -152,10 +151,7 @@ function Games() {
 
   const handlePrizeUpdate = async (game, prize) => {
     try {
-      await axios.put(
-        `${API_BASE_URL}/api/games/${game.id}/prizes/${prize.position}`,
-        prize
-      );
+      await axios.put(`/games/${game.id}/prizes/${prize.position}`, prize);
       fetchGames();
       setSnackbar({
         open: true,
@@ -325,4 +321,4 @@ function Games() {
   );
 }
 
-export default Games; 
+export default Games;
