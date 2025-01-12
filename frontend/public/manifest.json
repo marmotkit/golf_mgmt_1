@@ -1,6 +1,6 @@
 {
-  "short_name": "高爾夫球場管理系統",
-  "name": "高爾夫球場會員管理系統",
+  "short_name": "Golf Management",
+  "name": "Golf Club Management System",
   "icons": [
     {
       "src": "favicon.ico",
