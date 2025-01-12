@@ -1,11 +1,15 @@
 // API URL configuration
-const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+const apiBaseUrl = isDevelopment
+    ? 'http://localhost:5000/api'
+    : 'https://golf-mgmt-1.onrender.com/api';
 
 // Debug information
 console.log('Environment Config:', {
     NODE_ENV: process.env.NODE_ENV,
-    REACT_APP_API_URL: process.env.REACT_APP_API_URL,
-    apiBaseUrl: apiBaseUrl
+    isDevelopment,
+    apiBaseUrl
 });
 
 const config = {
