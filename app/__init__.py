@@ -5,6 +5,7 @@ from flask_cors import CORS
 from config import Config
 import logging
 import sys
+from sqlalchemy import text
 
 # 配置日誌
 logging.basicConfig(
@@ -46,14 +47,21 @@ def create_app(config_class=Config):
         
         # 檢查資料庫連接
         with app.app_context():
-            db.engine.execute('SELECT 1')
-            logger.info('Database connection test successful')
-            
-            # 檢查 versions 表是否存在
-            result = db.engine.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'versions')"
-            ).scalar()
-            logger.info(f'Versions table exists: {result}')
+            try:
+                # 使用新的 SQLAlchemy 語法
+                with db.engine.connect() as conn:
+                    conn.execute(text('SELECT 1'))
+                logger.info('Database connection test successful')
+                
+                # 檢查 versions 表是否存在
+                result = conn.execute(text(
+                    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'versions')"
+                )).scalar()
+                logger.info(f'Versions table exists: {result}')
+                
+            except Exception as e:
+                logger.error(f'Database connection test failed: {str(e)}')
+                raise
             
     except Exception as e:
         logger.error(f'Error initializing database: {str(e)}')

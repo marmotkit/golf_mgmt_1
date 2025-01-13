@@ -4,6 +4,7 @@ from app.models import Version
 import traceback
 from datetime import datetime
 import logging
+from sqlalchemy import text
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)
@@ -17,7 +18,7 @@ def ensure_version_exists():
         logger.info('Checking if version exists...')
         
         # 檢查是否有任何版本記錄
-        version_count = Version.query.count()
+        version_count = db.session.query(Version).count()
         logger.info(f'Found {version_count} versions')
         
         if version_count == 0:
@@ -63,7 +64,7 @@ def get_version():
         
         # 獲取最新版本
         try:
-            latest_version = Version.query.order_by(Version.created_at.desc()).first()
+            latest_version = db.session.query(Version).order_by(text('created_at DESC')).first()
             logger.info(f'Latest version: {latest_version.version if latest_version else None}')
             
             if latest_version:
@@ -93,7 +94,7 @@ def get_version_description():
         
         # 獲取最新版本
         try:
-            latest_version = Version.query.order_by(Version.created_at.desc()).first()
+            latest_version = db.session.query(Version).order_by(text('created_at DESC')).first()
             logger.info(f'Latest version description: {latest_version.description if latest_version else None}')
             
             if latest_version:
