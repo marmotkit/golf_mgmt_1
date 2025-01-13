@@ -4,6 +4,10 @@ import config from '../config';
 const instance = axios.create({
   baseURL: config.apiBaseUrl,
   timeout: 10000,
+  withCredentials: true,  // 添加這行
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // 添加請求攔截器
