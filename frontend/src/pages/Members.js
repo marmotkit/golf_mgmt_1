@@ -165,47 +165,46 @@ const Members = () => {
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
+  
+    if (!file.name.endsWith('.xlsx')) {
+      setSnackbar({
+        open: true,
+        message: '只能上傳 Excel (.xlsx) 檔案',
+        severity: 'error',
+      });
+      return;
+    }
+  
     const formData = new FormData();
     formData.append('file', file);
-
+  
     try {
       setLoading(true);
-      const response = await axios.post(`/members/upload`, formData, {
+      console.log('Uploading file:', file.name);
+      
+      const response = await axios({
+        method: 'post',
+        url: '/members/upload',
+        data: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-
+      
+      console.log('Upload response:', response.data);
+  
       setSnackbar({
         open: true,
-        message: `成功上傳 ${response.data.success_count} 筆資料${response.data.error_messages.length > 0 ? '，但有部分資料有誤' : ''}`,
-        severity: response.data.success_count > 0 ? 'success' : 'error',
+        message: `成功上傳 ${response.data.success_count} 筆資料`,
+        severity: 'success',
       });
-
-      if (response.data.error_messages.length > 0) {
-        console.log('Errors:', response.data.error_messages);
-      }
-
-      // 重新獲取版本列表並更新當前版本
-      const versionsResponse = await axios.get(`/members/versions`);
-      if (versionsResponse.data.length > 0) {
-        const latestVersion = versionsResponse.data[0];
-        setVersionList(versionsResponse.data);
-        setCurrentVersion(latestVersion);
-        
-        // 使用最新版本重新獲取會員資料
-        const membersResponse = await axios.get(`/members?version=${latestVersion.version}`);
-        const sortedMembers = membersResponse.data.sort((a, b) => {
-          if (a.is_guest !== b.is_guest) {
-            return a.is_guest ? 1 : -1;
-          }
-          return (a.member_number || '').localeCompare(b.member_number || '');
-        });
-        setMembers(sortedMembers);
-      }
-      
+  
+      // 重新獲取資料
+      await fetchVersions();
+      await fetchMembers();
+  
     } catch (error) {
+      console.error('Upload error:', error.response?.data || error);
       setSnackbar({
         open: true,
         message: error.response?.data?.error || '上傳失敗',
@@ -214,7 +213,7 @@ const Members = () => {
     } finally {
       setLoading(false);
       setUploadOpen(false);
-      event.target.value = '';  // 清除檔案選擇
+      event.target.value = null;  // 清除檔案選擇
     }
   };
 

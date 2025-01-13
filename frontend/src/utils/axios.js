@@ -4,15 +4,13 @@ import config from '../config';
 const instance = axios.create({
   baseURL: config.apiBaseUrl,
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  }
 });
 
 // 添加請求攔截器
 instance.interceptors.request.use(
   (config) => {
     console.log('Making request:', config.method?.toUpperCase(), config.url);
+    console.log('Request headers:', config.headers);
     return config;
   },
   (error) => {
