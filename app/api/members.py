@@ -299,6 +299,7 @@ def upload_members():
 
         # Ensure upload directory exists
         upload_dir = ensure_upload_dir()
+        logger.info(f'Upload directory: {upload_dir}')
         
         # Save file with secure filename
         filename = secure_filename(file.filename)
@@ -308,10 +309,24 @@ def upload_members():
         
         # Read Excel file
         try:
-            df = pd.read_excel(filepath)
+            logger.info('Reading Excel file...')
+            df = pd.read_excel(filepath, dtype=str)  # 先將所有欄位讀取為字符串
             logger.info(f'Excel file read successfully: {len(df)} rows')
+            logger.info(f'Columns: {df.columns.tolist()}')
+            logger.info(f'First row: {df.iloc[0].to_dict() if len(df) > 0 else "No data"}')
+            
+            # 檢查是否為空檔案
+            if len(df) == 0:
+                logger.error('Empty Excel file')
+                return jsonify({
+                    'error': 'Excel 檔案為空',
+                    'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
+                    'success_count': 0
+                }), 400
+                
         except Exception as e:
             logger.error(f'Error reading Excel file: {str(e)}')
+            logger.error(traceback.format_exc())
             return jsonify({
                 'error': 'Excel 檔案讀取失敗',
                 'error_messages': [str(e)],
@@ -320,9 +335,20 @@ def upload_members():
         
         # Process data
         try:
-            result = process_excel_data(df)
-            logger.info('Data processed successfully')
-            return jsonify(result)
+            logger.info('Processing Excel data...')
+            success_count, error_messages = process_excel_data(df)
+            logger.info(f'Data processed. Success: {success_count}, Errors: {len(error_messages)}')
+            
+            if success_count == 0 and error_messages:
+                logger.error(f'No records processed successfully. Errors: {error_messages}')
+                return jsonify({
+                    'error': '資料處理失敗',
+                    'error_messages': error_messages,
+                    'success_count': 0
+                }), 400
+                
+            return jsonify([success_count, error_messages])
+            
         except Exception as e:
             logger.error(f'Error processing data: {str(e)}')
             logger.error(traceback.format_exc())
