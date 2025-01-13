@@ -18,6 +18,7 @@ import {
   Alert,
   Snackbar,
   CircularProgress,
+  TableSortLabel,
 } from '@mui/material';
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import TournamentDialog from '../components/TournamentDialog';
@@ -35,6 +36,8 @@ function Tournaments() {
     message: '',
     severity: 'success'
   });
+  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState('date');
 
   // 获取赛事列表
   const fetchTournaments = async () => {
@@ -56,6 +59,26 @@ function Tournaments() {
   // 显示提示信息
   const showSnackbar = (message, severity = 'success') => {
     setSnackbar({ open: true, message, severity });
+  };
+
+  // 处理排序
+  const handleRequestSort = () => {
+    const isAsc = orderBy === 'date' && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy('date');
+  };
+
+  // 排序函数
+  const sortTournaments = (tournaments) => {
+    return tournaments.sort((a, b) => {
+      const dateA = dayjs(a.date);
+      const dateB = dayjs(b.date);
+      if (order === 'asc') {
+        return dateA.isBefore(dateB) ? -1 : 1;
+      } else {
+        return dateB.isBefore(dateA) ? -1 : 1;
+      }
+    });
   };
 
   // 处理创建赛事
@@ -149,13 +172,21 @@ function Tournaments() {
             <TableRow>
               <TableCell>賽事名稱</TableCell>
               <TableCell>球場</TableCell>
-              <TableCell>日期</TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'date'}
+                  direction={order}
+                  onClick={handleRequestSort}
+                >
+                  日期
+                </TableSortLabel>
+              </TableCell>
               <TableCell>備註</TableCell>
               <TableCell width="120">操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {tournaments.map((tournament) => (
+            {sortTournaments([...tournaments]).map((tournament) => (
               <TableRow key={tournament.id}>
                 <TableCell>{tournament.name}</TableCell>
                 <TableCell>{tournament.location}</TableCell>
