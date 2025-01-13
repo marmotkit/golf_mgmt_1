@@ -90,8 +90,8 @@ const Dashboard = () => {
         ] = await Promise.all([
           axios.get('/dashboard/stats'),
           axios.get('/dashboard/announcements'),
-          axios.get('/version'),
-          axios.get('/version/description'),
+          axios.get('/dashboard/version'),
+          axios.get('/dashboard/version/description'),
         ]);
 
         setStats(statsResponse.data);
@@ -138,7 +138,7 @@ const Dashboard = () => {
 
     const newVersion = `V${newMajor}.${newMinor}`;
     try {
-      await axios.post('/version', { version: newVersion });
+      await axios.post('/dashboard/version', { version: newVersion });
       setVersion(newVersion);
     } catch (error) {
       console.error('Error updating version:', error);
@@ -248,7 +248,7 @@ const Dashboard = () => {
   const handleDescriptionEdit = async () => {
     if (isEditingDescription) {
       try {
-        await axios.post('/version/description', { description: editedDescription });
+        await axios.post('/dashboard/version/description', { description: editedDescription });
         setVersionDescription(editedDescription);
       } catch (error) {
         console.error('Error updating version description:', error);
