@@ -31,45 +31,6 @@ const WheelGame = ({ game, onPrizeUpdate }) => {
   const expandedCanvasRef = useRef(null);
   const dialogContentRef = useRef(null);
 
-  // 繪製小轉盤
-  useEffect(() => {
-    if (canvasRef.current) {
-      drawWheel(canvasRef.current, 400);
-    }
-  }, [game.prizes, rotation, drawWheel]);
-
-  // 繪製大轉盤
-  useEffect(() => {
-    if (isExpanded && expandedCanvasRef.current) {
-      drawWheel(expandedCanvasRef.current, 600);
-    }
-  }, [isExpanded, game.prizes, rotation, drawWheel]);
-
-  const handleExpand = () => {
-    setIsExpanded(true);
-    // 確保在下一幀立即繪製大轉盤，並保持當前旋轉角度和中獎結果
-    requestAnimationFrame(() => {
-      if (expandedCanvasRef.current) {
-        const size = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.7);
-        expandedCanvasRef.current.width = size;
-        expandedCanvasRef.current.height = size;
-        drawWheel(expandedCanvasRef.current, size);
-      }
-    });
-  };
-
-  // 當對話框關閉時重置轉盤狀態
-  const handleDialogClose = () => {
-    setIsExpanded(false);
-    setIsFullscreen(false);
-    // 確保小轉盤顯示相同的狀態
-    requestAnimationFrame(() => {
-      if (canvasRef.current) {
-        drawWheel(canvasRef.current, 400);
-      }
-    });
-  };
-
   const drawWheel = (canvas, size) => {
     if (!canvas) return;
 
@@ -137,6 +98,45 @@ const WheelGame = ({ game, onPrizeUpdate }) => {
     ctx.fill();
 
     ctx.restore();
+  };
+
+  // 繪製小轉盤
+  useEffect(() => {
+    if (canvasRef.current) {
+      drawWheel(canvasRef.current, 400);
+    }
+  }, [game.prizes, rotation]);
+
+  // 繪製大轉盤
+  useEffect(() => {
+    if (isExpanded && expandedCanvasRef.current) {
+      drawWheel(expandedCanvasRef.current, 600);
+    }
+  }, [isExpanded, game.prizes, rotation]);
+
+  const handleExpand = () => {
+    setIsExpanded(true);
+    // 確保在下一幀立即繪製大轉盤，並保持當前旋轉角度和中獎結果
+    requestAnimationFrame(() => {
+      if (expandedCanvasRef.current) {
+        const size = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.7);
+        expandedCanvasRef.current.width = size;
+        expandedCanvasRef.current.height = size;
+        drawWheel(expandedCanvasRef.current, size);
+      }
+    });
+  };
+
+  // 當對話框關閉時重置轉盤狀態
+  const handleDialogClose = () => {
+    setIsExpanded(false);
+    setIsFullscreen(false);
+    // 確保小轉盤顯示相同的狀態
+    requestAnimationFrame(() => {
+      if (canvasRef.current) {
+        drawWheel(canvasRef.current, 400);
+      }
+    });
   };
 
   const spinWheel = () => {
