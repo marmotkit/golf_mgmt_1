@@ -49,22 +49,29 @@ def create_app(config_class=Config):
     logger.info(f'SQLALCHEMY_DATABASE_URI: {app.config["SQLALCHEMY_DATABASE_URI"]}')
     
     # 配置 CORS
-    @app.before_request
-    def handle_preflight():
-        if request.method == "OPTIONS":
-            response = app.make_default_options_response()
-            response.headers["Access-Control-Allow-Origin"] = "https://golf-mgmt-1-frontend.onrender.com"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Max-Age"] = "3600"
-            return response
-
     @app.after_request
     def add_cors_headers(response):
+        if request.method == "OPTIONS":
+            # 處理預檢請求
+            response = app.make_default_options_response()
+        
+        # 檢查是否來自允許的域名
         if request.headers.get("Origin") == "https://golf-mgmt-1-frontend.onrender.com":
-            response.headers["Access-Control-Allow-Origin"] = "https://golf-mgmt-1-frontend.onrender.com"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
+            # 刪除可能存在的舊頭部
+            response.headers.pop("Access-Control-Allow-Origin", None)
+            response.headers.pop("Access-Control-Allow-Methods", None)
+            response.headers.pop("Access-Control-Allow-Headers", None)
+            response.headers.pop("Access-Control-Allow-Credentials", None)
+            
+            # 添加新的頭部
+            response.headers.set("Access-Control-Allow-Origin", "https://golf-mgmt-1-frontend.onrender.com")
+            response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+            response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
+            response.headers.set("Access-Control-Allow-Credentials", "true")
+            
+            if request.method == "OPTIONS":
+                response.headers.set("Access-Control-Max-Age", "3600")
+                
         return response
         
     logger.info('CORS configured')
