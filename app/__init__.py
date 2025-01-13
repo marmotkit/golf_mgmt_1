@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
@@ -50,19 +50,16 @@ def create_app(config_class=Config):
     logger.info(f'SQLALCHEMY_DATABASE_URI: {app.config["SQLALCHEMY_DATABASE_URI"]}')
     
     # 配置 CORS
-    CORS(app, 
-        resources={
-            r"/api/*": {
-                "origins": ["https://golf-mgmt-1-frontend.onrender.com"],
-                "supports_credentials": True,
-                "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
-                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-                "expose_headers": ["Content-Type", "Authorization"]
-            }
-        }
-    )
-    
-    logger.info('CORS configured')
+    @app.after_request
+    def after_request(response):
+        origin = request.headers.get('Origin')
+        if origin == 'https://golf-mgmt-1-frontend.onrender.com':
+            response.headers['Access-Control-Allow-Origin'] = origin
+            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
+            response.headers['Access-Control-Allow-Credentials'] = 'true'
+            response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+        return response
 
     @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
     @app.route('/<path:path>', methods=['OPTIONS'])
