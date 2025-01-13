@@ -404,11 +404,14 @@ def upload_scores():
             'details': str(e)
         }), 500
 
-@bp.route('/scores/annual-stats', methods=['POST'])
+@bp.route('/annual-stats', methods=['POST'])
 def get_annual_stats():
     try:
+        current_app.logger.info("開始計算年度總成績")
         data = request.get_json()
         tournament_ids = data.get('tournament_ids', [])
+        
+        current_app.logger.info(f"接收到的賽事ID列表: {tournament_ids}")
         
         if not tournament_ids:
             return jsonify({'error': '請選擇至少一個賽事'}), 400
@@ -416,6 +419,9 @@ def get_annual_stats():
         # 獲取所選賽事的所有成績
         scores = Score.query.filter(Score.tournament_id.in_(tournament_ids)).all()
         tournaments = Tournament.query.filter(Tournament.id.in_(tournament_ids)).all()
+        
+        current_app.logger.info(f"找到 {len(scores)} 筆成績記錄")
+        current_app.logger.info(f"找到 {len(tournaments)} 個賽事")
         
         # 建立賽事 ID 到名稱的映射
         tournament_names = {t.id: t.name for t in tournaments}
@@ -477,6 +483,7 @@ def get_annual_stats():
         # 按總積分降序排序
         result.sort(key=lambda x: x['total_points'], reverse=True)
         
+        current_app.logger.info(f"計算完成，返回 {len(result)} 筆統計數據")
         return jsonify(result)
         
     except Exception as e:
