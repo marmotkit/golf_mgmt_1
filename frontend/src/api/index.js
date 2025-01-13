@@ -1,7 +1,7 @@
 import axios from '../utils/axios';
 import config from '../config';
 
-const API_BASE_URL = config.API_BASE_URL;
+const API_BASE_URL = config.apiBaseUrl;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -29,15 +29,19 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('Response Error:', error);
-    if (error.response) {
-      console.error('Error Data:', error.response.data);
-      console.error('Error Status:', error.response.status);
-      console.error('Error Headers:', error.response.headers);
-    }
+    console.error('Response error:', error.response);
     return Promise.reject(error);
   }
 );
+
+// 會員管理 API
+export const membersApi = {
+  getAll: () => api.get('/members'),
+  getById: (id) => api.get(`/members/${id}`),
+  create: (data) => api.post('/members', data),
+  update: (id, data) => api.put(`/members/${id}`, data),
+  delete: (id) => api.delete(`/members/${id}`),
+};
 
 // 賽事管理 API
 export const tournamentsApi = {
@@ -62,6 +66,23 @@ export const reportsApi = {
   getTournamentStats: () => api.get('/reports/tournaments'),
   getPlayerStats: () => api.get('/reports/players'),
   getScoreStats: () => api.get('/reports/scores'),
+};
+
+// 遊戲管理 API
+export const gamesApi = {
+  getAll: () => api.get('/games'),
+  getById: (id) => api.get(`/games/${id}`),
+  create: (data) => api.post('/games', data),
+  update: (id, data) => api.put(`/games/${id}`, data),
+  delete: (id) => api.delete(`/games/${id}`),
+  getPrizes: (gameId) => api.get(`/games/${gameId}/prizes`),
+  updatePrize: (gameId, position, data) => api.put(`/games/${gameId}/prizes/${position}`, data),
+};
+
+// 版本管理 API
+export const versionApi = {
+  getVersion: () => api.get('/version'),
+  getDescription: () => api.get('/version/description'),
 };
 
 export default api;

@@ -2,7 +2,7 @@
 const VERSION = '1.0.0';
 
 // Production API URL (hardcoded)
-const apiBaseUrl = 'https://golf-mgmt-1.onrender.com';
+const apiBaseUrl = 'https://golf-mgmt-1.onrender.com/api';
 
 console.log(`Golf Management App ${VERSION} - Using API:`, apiBaseUrl);
 
