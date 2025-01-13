@@ -4,14 +4,14 @@ from app.models import Version
 
 bp = Blueprint('version', __name__)
 
-@bp.route('/version', methods=['GET'])
+@bp.route('/', methods=['GET'])
 def get_version():
     latest_version = Version.query.order_by(Version.created_at.desc()).first()
     if latest_version:
         return jsonify({'version': latest_version.version})
     return jsonify({'version': '1.0.0'})
 
-@bp.route('/version/description', methods=['GET'])
+@bp.route('/description', methods=['GET'])
 def get_version_description():
     latest_version = Version.query.order_by(Version.created_at.desc()).first()
     if latest_version:
