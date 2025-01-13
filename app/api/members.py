@@ -100,22 +100,49 @@ def process_excel_data(df):
                 logger.info(f'Processing row {index + 1}: {row.to_dict()}')
                 
                 # 檢查並清理資料
-                account = str(row['帳號']).strip() if pd.notna(row['帳號']) else None
-                chinese_name = str(row['中文姓名']).strip() if pd.notna(row['中文姓名']) else None
-                english_name = str(row['英文姓名']).strip() if pd.notna(row['英文姓名']) else None
-                department_class = str(row['系級']).strip() if pd.notna(row['系級']) else None
-                member_number = str(row['會員編號']).strip() if pd.notna(row['會員編號']) else None
-                is_guest = str(row['會員類型']).strip() == '來賓' if pd.notna(row['會員類型']) else False
-                is_admin = str(row['是否為管理員']).strip() in ['是', '1', 'True', 'true'] if pd.notna(row['是否為管理員']) else False
-                
-                # 特別處理差點欄位
                 try:
-                    handicap_str = str(row['差點']).strip() if pd.notna(row['差點']) else None
-                    handicap = float(handicap_str) if handicap_str is not None else None
-                    logger.info(f'Handicap processed: {handicap_str} -> {handicap}')
-                except (ValueError, TypeError) as e:
-                    handicap = None
-                    logger.warning(f'Invalid handicap value in row {index + 1}: {row["差點"]}, Error: {str(e)}')
+                    # 帳號：移除空白，轉換為小寫
+                    account = str(row['帳號']).strip().lower() if pd.notna(row['帳號']) else None
+                    logger.info(f'Account processed: {row["帳號"]} -> {account}')
+                    
+                    # 中文姓名：移除空白
+                    chinese_name = str(row['中文姓名']).strip() if pd.notna(row['中文姓名']) else None
+                    logger.info(f'Chinese name processed: {row["中文姓名"]} -> {chinese_name}')
+                    
+                    # 英文姓名：移除空白，保持原始大小寫
+                    english_name = str(row['英文姓名']).strip() if pd.notna(row['英文姓名']) else None
+                    logger.info(f'English name processed: {row["英文姓名"]} -> {english_name}')
+                    
+                    # 系級：移除空白，統一格式
+                    department_class = str(row['系級']).strip() if pd.notna(row['系級']) else None
+                    logger.info(f'Department class processed: {row["系級"]} -> {department_class}')
+                    
+                    # 會員編號：移除空白，轉換為大寫
+                    member_number = str(row['會員編號']).strip().upper() if pd.notna(row['會員編號']) else None
+                    logger.info(f'Member number processed: {row["會員編號"]} -> {member_number}')
+                    
+                    # 會員類型：檢查是否為來賓
+                    is_guest = str(row['會員類型']).strip() == '來賓' if pd.notna(row['會員類型']) else False
+                    logger.info(f'Is guest processed: {row["會員類型"]} -> {is_guest}')
+                    
+                    # 管理員：檢查多種可能的值
+                    admin_value = str(row['是否為管理員']).strip().lower() if pd.notna(row['是否為管理員']) else ''
+                    is_admin = admin_value in ['是', '1', 'true', 'yes', 'y']
+                    logger.info(f'Is admin processed: {row["是否為管理員"]} -> {is_admin}')
+                    
+                    # 特別處理差點欄位
+                    try:
+                        handicap_str = str(row['差點']).strip() if pd.notna(row['差點']) else None
+                        handicap = float(handicap_str) if handicap_str is not None else None
+                        logger.info(f'Handicap processed: {handicap_str} -> {handicap}')
+                    except (ValueError, TypeError) as e:
+                        handicap = None
+                        logger.warning(f'Invalid handicap value in row {index + 1}: {row["差點"]}, Error: {str(e)}')
+                    
+                except Exception as e:
+                    logger.error(f'Error processing row data: {str(e)}')
+                    logger.error(traceback.format_exc())
+                    raise ValueError(f'資料格式錯誤: {str(e)}')
                 
                 # 記錄處理後的資料
                 member_data = {
