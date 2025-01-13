@@ -80,10 +80,10 @@ def process_excel_data(df):
             return 0, [f'缺少必要欄位: {", ".join(missing_columns)}']
 
         # 檢查是否有重複的會員編號
-        member_numbers = df['會員編號'].dropna().astype(str).tolist()
-        if len(member_numbers) != len(set(member_numbers)):
+        member_numbers = df['會員編號'].fillna('').astype(str).str.strip().tolist()
+        duplicates = [num for num in member_numbers if num and member_numbers.count(num) > 1]
+        if duplicates:
             logger.error('Duplicate member numbers found')
-            duplicates = [num for num in member_numbers if member_numbers.count(num) > 1]
             return 0, [f'Excel 檔案中包含重複的會員編號: {", ".join(set(duplicates))}']
 
         # 第二步：開始資料庫事務
