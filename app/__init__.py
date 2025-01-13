@@ -29,13 +29,13 @@ def create_app(config_class=Config):
 
     # 註冊 API 藍圖
     from app.api import members, tournaments, scores, games, reports, dashboard, version
-    app.register_blueprint(members.bp)  
-    app.register_blueprint(tournaments.bp)  
-    app.register_blueprint(scores.bp)  
-    app.register_blueprint(games.bp)  
-    app.register_blueprint(reports.bp)  
-    app.register_blueprint(dashboard.bp)  
-    app.register_blueprint(version.bp)  
+    app.register_blueprint(members.bp, url_prefix='/api/members')  
+    app.register_blueprint(tournaments.bp, url_prefix='/api/tournaments')  
+    app.register_blueprint(scores.bp, url_prefix='/api/scores')  
+    app.register_blueprint(games.bp, url_prefix='/api/games')  
+    app.register_blueprint(reports.bp, url_prefix='/api/reports')  
+    app.register_blueprint(dashboard.bp, url_prefix='/api/dashboard')  
+    app.register_blueprint(version.bp, url_prefix='/api/version')  
 
     @app.route('/health')
     def health_check():

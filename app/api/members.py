@@ -1,18 +1,16 @@
 from flask import Blueprint, jsonify, request, current_app
-from app.models import Member, db
-
-bp = Blueprint('members', __name__)
 from werkzeug.utils import secure_filename
 import pandas as pd
 import os
 from app import db
 from app.models import Member, MemberVersion
-from app.api import bp
 import logging
 import traceback
 from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy import Boolean
+
+bp = Blueprint('members', __name__)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -197,7 +195,7 @@ def _parse_bool(value):
         return bool(value)
     return False
 
-@bp.route('/members', methods=['GET'])
+@bp.route('/', methods=['GET'])
 def get_members():
     """獲取會員列表"""
     try:
@@ -256,7 +254,7 @@ def get_members():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/members/upload', methods=['POST'])
+@bp.route('/upload', methods=['POST'])
 def upload_members():
     logger.info('File upload request received')
     logger.info(f'Request files: {request.files}')
@@ -339,7 +337,7 @@ def upload_members():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/members/batch-delete', methods=['POST'])
+@bp.route('/batch-delete', methods=['POST'])
 def batch_delete_members():
     logger.info('Batch delete request received')
     data = request.get_json()
@@ -374,7 +372,7 @@ def batch_delete_members():
         'errors': error_ids
     })
 
-@bp.route('/members', methods=['POST'])
+@bp.route('/', methods=['POST'])
 def create_member():
     logger.info('Create member request received')
     data = request.get_json()
@@ -408,7 +406,7 @@ def create_member():
         logger.error(traceback.format_exc())
         return jsonify({'error': f'Error creating member: {str(e)}'}), 400
 
-@bp.route('/members/<int:member_id>', methods=['PUT', 'PATCH'])
+@bp.route('/<int:member_id>', methods=['PUT', 'PATCH'])
 def update_member(member_id):
     try:
         data = request.get_json()
@@ -518,7 +516,7 @@ def update_member(member_id):
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 400
 
-@bp.route('/members/<int:id>', methods=['DELETE'])
+@bp.route('/<int:id>', methods=['DELETE'])
 def delete_member(id):
     try:
         member = Member.query.get_or_404(id)
@@ -530,7 +528,7 @@ def delete_member(id):
         logger.error(f"刪除會員失敗: {str(e)}")
         return jsonify({'error': str(e)}), 400
 
-@bp.route('/members/versions/<int:id>', methods=['GET'])
+@bp.route('/versions/<int:id>', methods=['GET'])
 def get_member_versions(id):
     logger.info(f'Get member versions request received for member {id}')
     versions = MemberVersion.query.filter_by(member_id=id).order_by(
@@ -541,7 +539,7 @@ def get_member_versions(id):
         'created_at': v.created_at
     } for v in versions])
 
-@bp.route('/members/compare', methods=['POST'])
+@bp.route('/compare', methods=['POST'])
 def compare_versions():
     """比較兩個版本的差異"""
     try:
@@ -618,7 +616,7 @@ def compare_versions():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/members/versions', methods=['GET'])
+@bp.route('/versions', methods=['GET'])
 def get_all_versions():
     """獲取所有版本列表"""
     try:
@@ -660,7 +658,7 @@ def get_all_versions():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/members/compare-versions', methods=['POST'])
+@bp.route('/compare-versions', methods=['POST'])
 def compare_member_versions():
     """比較單一會員的兩個版本"""
     logger.info('Compare member versions request received')
@@ -710,7 +708,7 @@ def compare_member_versions():
         logger.error(traceback.format_exc())
         return jsonify({'error': f'Error comparing versions: {str(e)}'}), 400
 
-@bp.route('/members/versions/<version>', methods=['DELETE'])
+@bp.route('/versions/<version>', methods=['DELETE'])
 def delete_version(version):
     """刪除指定版本的會員資料。只能刪除非最新版本。"""
     try:
@@ -762,7 +760,7 @@ def delete_version(version):
         logger.error(f'完整異常追蹤: {traceback.format_exc()}')
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/members/clear', methods=['POST'])
+@bp.route('/clear', methods=['POST'])
 def clear_members():
     try:
         # 先清除所有版本記錄
@@ -777,7 +775,7 @@ def clear_members():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/members/count', methods=['GET'])
+@bp.route('/count', methods=['GET'])
 def get_member_count():
     """獲取最新版本的會員總數（不含來賓）"""
     try:
@@ -824,7 +822,7 @@ def get_member_count():
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/members/count', methods=['GET'])
+@bp.route('/count', methods=['GET'])
 def get_members_count():
     try:
         count = Member.query.count()

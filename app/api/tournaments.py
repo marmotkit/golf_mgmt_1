@@ -1,46 +1,42 @@
-from flask import Blueprint, jsonify, request
-from app.models import Tournament, db
-
-bp = Blueprint('tournaments', __name__)
-# ... 其他路由代碼 ...
-from flask import jsonify, request, current_app
-from app.api import bp
+from flask import Blueprint, jsonify, request, current_app
 from app.models import Tournament, db
 import logging
 import traceback
 import json
 from datetime import datetime
 
+bp = Blueprint('tournaments', __name__)
+
 # 使用當前應用的日誌記錄器
 logger = current_app.logger if current_app else logging.getLogger(__name__)
 
-@bp.route('/tournaments', methods=['GET'])
+@bp.route('/', methods=['GET'])
 def get_tournaments():
     try:
         tournaments = Tournament.query.all()
         return jsonify([t.to_dict() for t in tournaments])
     except Exception as e:
-        current_app.logger.error(f"Error fetching tournaments: {str(e)}")
-        current_app.logger.error(traceback.format_exc())
+        logger.error(f"獲取賽事列表時發生錯誤: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
-            'error': 'Failed to fetch tournaments',
+            'error': '獲取賽事列表失敗',
             'details': str(e)
         }), 500
 
-@bp.route('/tournaments/<int:id>', methods=['GET'])
+@bp.route('/<int:id>', methods=['GET'])
 def get_tournament(id):
     try:
         tournament = Tournament.query.get_or_404(id)
         return jsonify(tournament.to_dict())
     except Exception as e:
-        current_app.logger.error(f"Error fetching tournament {id}: {str(e)}")
-        current_app.logger.error(traceback.format_exc())
+        logger.error(f"獲取賽事 {id} 時發生錯誤: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({
-            'error': f'Failed to fetch tournament {id}',
+            'error': f'獲取賽事 {id} 失敗',
             'details': str(e)
         }), 500
 
-@bp.route('/tournaments', methods=['POST'])
+@bp.route('/', methods=['POST'])
 def create_tournament():
     try:
         # 获取 JSON 数据
@@ -118,7 +114,7 @@ def create_tournament():
             'traceback': traceback.format_exc()
         }), 500
 
-@bp.route('/tournaments/<int:id>', methods=['PUT'])
+@bp.route('/<int:id>', methods=['PUT'])
 def update_tournament(id):
     try:
         tournament = Tournament.query.get_or_404(id)
@@ -170,7 +166,7 @@ def update_tournament(id):
             'details': str(e)
         }), 500
 
-@bp.route('/tournaments/<int:id>', methods=['DELETE'])
+@bp.route('/<int:id>', methods=['DELETE'])
 def delete_tournament(id):
     try:
         tournament = Tournament.query.get_or_404(id)
