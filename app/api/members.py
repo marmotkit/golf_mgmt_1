@@ -70,6 +70,7 @@ def process_excel_data(df):
         logger.info(f'DataFrame info: {df.info()}')
         logger.info(f'DataFrame columns: {df.columns.tolist()}')
         logger.info(f'DataFrame shape: {df.shape}')
+        logger.info(f'DataFrame first row: {df.iloc[0].to_dict() if len(df) > 0 else "No data"}')
         
         # 第一步：驗證所有資料
         required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員']
@@ -82,7 +83,8 @@ def process_excel_data(df):
         member_numbers = df['會員編號'].dropna().astype(str).tolist()
         if len(member_numbers) != len(set(member_numbers)):
             logger.error('Duplicate member numbers found')
-            return 0, ['Excel 檔案中包含重複的會員編號']
+            duplicates = [num for num in member_numbers if member_numbers.count(num) > 1]
+            return 0, [f'Excel 檔案中包含重複的會員編號: {", ".join(set(duplicates))}']
 
         # 第二步：開始資料庫事務
         version_number = generate_version_number()
@@ -108,10 +110,12 @@ def process_excel_data(df):
                 
                 # 特別處理差點欄位
                 try:
-                    handicap = float(str(row['差點']).strip()) if pd.notna(row['差點']) else None
-                except (ValueError, TypeError):
+                    handicap_str = str(row['差點']).strip() if pd.notna(row['差點']) else None
+                    handicap = float(handicap_str) if handicap_str is not None else None
+                    logger.info(f'Handicap processed: {handicap_str} -> {handicap}')
+                except (ValueError, TypeError) as e:
                     handicap = None
-                    logger.warning(f'Invalid handicap value in row {index + 1}: {row["差點"]}')
+                    logger.warning(f'Invalid handicap value in row {index + 1}: {row["差點"]}, Error: {str(e)}')
                 
                 # 記錄處理後的資料
                 member_data = {
@@ -145,8 +149,11 @@ def process_excel_data(df):
                     logger.info(f'Updating existing member: {member_number}')
                     # 更新現有會員資料
                     for key, value in member_data.items():
-                        if value is not None:  
-                            setattr(member, key, value)
+                        if value is not None:  # 只更新非空值
+                            current_value = getattr(member, key)
+                            if current_value != value:
+                                logger.info(f'Updating {key}: {current_value} -> {value}')
+                                setattr(member, key, value)
 
                 # 創建版本記錄
                 version = MemberVersion(
@@ -164,7 +171,7 @@ def process_excel_data(df):
                 logger.error(error_msg)
                 logger.error(traceback.format_exc())
                 row_errors.append(error_msg)
-                continue  
+                continue  # 繼續處理下一行
 
         # 如果有成功處理的資料，就提交
         if success_count > 0:
@@ -329,6 +336,17 @@ def upload_members():
                 return jsonify({
                     'error': 'Excel 檔案為空',
                     'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
+                    'success_count': 0
+                }), 400
+                
+            # 檢查欄位名稱
+            required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
+                logger.error(f'Missing columns: {missing_columns}')
+                return jsonify({
+                    'error': '缺少必要欄位',
+                    'error_messages': [f'缺少必要欄位: {", ".join(missing_columns)}'],
                     'success_count': 0
                 }), 400
                 
