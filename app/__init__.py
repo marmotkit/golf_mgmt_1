@@ -1,7 +1,6 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_cors import CORS
 from config import Config
 import logging
 import sys
@@ -50,22 +49,26 @@ def create_app(config_class=Config):
     logger.info(f'SQLALCHEMY_DATABASE_URI: {app.config["SQLALCHEMY_DATABASE_URI"]}')
     
     # 配置 CORS
-    @app.after_request
-    def after_request(response):
-        origin = request.headers.get('Origin')
-        if origin == 'https://golf-mgmt-1-frontend.onrender.com':
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
-        return response
+    @app.before_request
+    def handle_preflight():
+        if request.method == "OPTIONS":
+            response = app.make_default_options_response()
+            response.headers["Access-Control-Allow-Origin"] = "https://golf-mgmt-1-frontend.onrender.com"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Requested-With, Accept, Origin"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Max-Age"] = "3600"
+            return response
 
-    @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
-    @app.route('/<path:path>', methods=['OPTIONS'])
-    def handle_options(path):
-        return '', 204
+    @app.after_request
+    def add_cors_headers(response):
+        if request.headers.get("Origin") == "https://golf-mgmt-1-frontend.onrender.com":
+            response.headers["Access-Control-Allow-Origin"] = "https://golf-mgmt-1-frontend.onrender.com"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+        return response
         
+    logger.info('CORS configured')
+
     try:
         # 初始化資料庫
         db.init_app(app)
