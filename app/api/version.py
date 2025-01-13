@@ -4,7 +4,7 @@ from app.models import Version
 import traceback
 from datetime import datetime
 import logging
-from sqlalchemy import text, desc
+from sqlalchemy import text, desc, inspect
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)
@@ -16,6 +16,13 @@ def ensure_version_exists():
     """確保至少存在一個版本記錄"""
     try:
         logger.info('Checking if version exists...')
+        
+        # 檢查表是否存在
+        inspector = inspect(db.engine)
+        if 'versions' not in inspector.get_table_names():
+            logger.info('Versions table does not exist, creating...')
+            Version.__table__.create(db.engine)
+            logger.info('Versions table created successfully')
         
         # 檢查是否有任何版本記錄
         version_count = db.session.query(Version).count()

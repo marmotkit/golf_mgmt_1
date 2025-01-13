@@ -51,7 +51,7 @@ function Tournaments() {
 
   useEffect(() => {
     fetchTournaments();
-  }, []);
+  }, [fetchTournaments]);
 
   // 显示提示信息
   const showSnackbar = (message, severity = 'success') => {
@@ -212,7 +212,7 @@ function Tournaments() {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert 

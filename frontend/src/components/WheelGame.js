@@ -36,14 +36,14 @@ const WheelGame = ({ game, onPrizeUpdate }) => {
     if (canvasRef.current) {
       drawWheel(canvasRef.current, 400);
     }
-  }, [game.prizes, rotation]);
+  }, [game.prizes, rotation, drawWheel]);
 
   // 繪製大轉盤
   useEffect(() => {
     if (isExpanded && expandedCanvasRef.current) {
       drawWheel(expandedCanvasRef.current, 600);
     }
-  }, [isExpanded, game.prizes, rotation]);
+  }, [isExpanded, game.prizes, rotation, drawWheel]);
 
   const handleExpand = () => {
     setIsExpanded(true);
