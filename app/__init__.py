@@ -5,7 +5,7 @@ from flask_cors import CORS
 from config import Config
 import logging
 import sys
-from sqlalchemy import text
+from sqlalchemy import text, inspect
 
 # 配置日誌
 logging.basicConfig(
@@ -27,11 +27,11 @@ def check_database_connection(app):
             result = db.session.execute(text('SELECT 1')).scalar()
             logger.info('Database connection test successful')
             
-            # 檢查 versions 表是否存在
-            result = db.session.execute(text(
-                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'versions')"
-            )).scalar()
-            logger.info(f'Versions table exists: {result}')
+            # 使用 SQLAlchemy 的 inspect 來檢查表是否存在
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            versions_exists = 'versions' in tables
+            logger.info(f'Versions table exists: {versions_exists}')
             
             # 確保更改被提交
             db.session.commit()
