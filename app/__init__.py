@@ -18,6 +18,29 @@ logger = logging.getLogger(__name__)
 db = SQLAlchemy()
 migrate = Migrate()
 
+def check_database_connection(app):
+    """檢查資料庫連接和表的存在性"""
+    try:
+        with app.app_context():
+            # 使用 session 而不是 engine 來執行查詢
+            # 檢查資料庫連接
+            result = db.session.execute(text('SELECT 1')).scalar()
+            logger.info('Database connection test successful')
+            
+            # 檢查 versions 表是否存在
+            result = db.session.execute(text(
+                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'versions')"
+            )).scalar()
+            logger.info(f'Versions table exists: {result}')
+            
+            # 確保更改被提交
+            db.session.commit()
+            
+            return True
+    except Exception as e:
+        logger.error(f'Database check failed: {str(e)}')
+        return False
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -41,27 +64,14 @@ def create_app(config_class=Config):
     logger.info('CORS configured')
 
     try:
+        # 初始化資料庫
         db.init_app(app)
         migrate.init_app(app, db)
         logger.info('Database initialized')
         
         # 檢查資料庫連接
-        with app.app_context():
-            try:
-                # 使用新的 SQLAlchemy 語法
-                with db.engine.connect() as conn:
-                    conn.execute(text('SELECT 1'))
-                logger.info('Database connection test successful')
-                
-                # 檢查 versions 表是否存在
-                result = conn.execute(text(
-                    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'versions')"
-                )).scalar()
-                logger.info(f'Versions table exists: {result}')
-                
-            except Exception as e:
-                logger.error(f'Database connection test failed: {str(e)}')
-                raise
+        if not check_database_connection(app):
+            raise Exception("Database connection check failed")
             
     except Exception as e:
         logger.error(f'Error initializing database: {str(e)}')
