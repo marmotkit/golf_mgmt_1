@@ -11,7 +11,7 @@ from sqlalchemy import func
 
 bp = Blueprint('scores', __name__)
 
-@bp.route('/scores', methods=['GET'])
+@bp.route('/', methods=['GET'])
 def get_scores():
     try:
         tournament_id = request.args.get('tournament_id')
