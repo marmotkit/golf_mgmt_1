@@ -83,8 +83,26 @@ def process_excel_data(df):
         member_numbers = df['會員編號'].fillna('').astype(str).str.strip().tolist()
         duplicates = [num for num in member_numbers if num and member_numbers.count(num) > 1]
         if duplicates:
-            logger.error('Duplicate member numbers found')
+            logger.error(f'Duplicate member numbers found: {duplicates}')
             return 0, [f'Excel 檔案中包含重複的會員編號: {", ".join(set(duplicates))}']
+
+        # 檢查必要欄位是否為空
+        empty_required = []
+        for idx, row in df.iterrows():
+            member_number = str(row['會員編號']).strip() if pd.notna(row['會員編號']) else ''
+            chinese_name = str(row['中文姓名']).strip() if pd.notna(row['中文姓名']) else ''
+            
+            if not member_number or not chinese_name:
+                empty_fields = []
+                if not member_number:
+                    empty_fields.append('會員編號')
+                if not chinese_name:
+                    empty_fields.append('中文姓名')
+                empty_required.append(f'第 {idx + 2} 行: {", ".join(empty_fields)} 為空')
+        
+        if empty_required:
+            logger.error(f'Empty required fields: {empty_required}')
+            return 0, empty_required
 
         # 第二步：開始資料庫事務
         version_number = generate_version_number()
@@ -390,7 +408,7 @@ def upload_members():
         try:
             logger.info('Processing Excel data...')
             success_count, error_messages = process_excel_data(df)
-            logger.info(f'Data processed. Success: {success_count}, Errors: {len(error_messages)}')
+            logger.info(f'Data processed. Success: {success_count}, Errors: {error_messages}')
             
             if success_count == 0 and error_messages:
                 logger.error(f'No records processed successfully. Errors: {error_messages}')
@@ -399,15 +417,20 @@ def upload_members():
                     'error_messages': error_messages,
                     'success_count': 0
                 }), 400
-                
-            return jsonify([success_count, error_messages])
+            
+            return jsonify({
+                'success': True,
+                'message': f'成功處理 {success_count} 筆資料',
+                'error_messages': error_messages,
+                'success_count': success_count
+            })
             
         except Exception as e:
             logger.error(f'Error processing data: {str(e)}')
-            logger.error(traceback.format_exc())
+            logger.error(f'Traceback: {traceback.format_exc()}')
             return jsonify({
-                'error': '部分資料處理失敗，請檢查錯誤訊息',
-                'error_messages': [str(e)],
+                'error': '資料處理過程中發生錯誤',
+                'error_messages': [f'錯誤詳情: {str(e)}'],
                 'success_count': 0
             }), 400
             
