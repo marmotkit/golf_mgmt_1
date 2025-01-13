@@ -57,8 +57,12 @@ def create_app(config_class=Config):
                 "https://golf-mgmt-1-frontend.onrender.com"
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+            "expose_headers": ["Content-Type", "Authorization"],
+            "supports_credentials": True,
+            "max_age": 600,
+            "send_wildcard": False,
+            "automatic_options": True
         }
     })
     logger.info('CORS configured')
