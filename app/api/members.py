@@ -33,9 +33,9 @@ def generate_version_number():
         if latest_version:
             current_version = latest_version[0]
         else:
-            # 如果沒有任何版本，從202501060001開始
+            # 如果沒有任何版本，從2025010601開始
             current_date = datetime.now().strftime('%Y%m%d')
-            current_version = int(f"{current_date}0001")
+            current_version = int(f"{current_date}01")
             
         # 生成新版本號
         date_part = str(current_version)[:8]  # 取出日期部分
@@ -48,7 +48,7 @@ def generate_version_number():
             # 如果是新的一天，序號重置為1
             sequence = 1
             
-        new_version = int(f"{current_date}{sequence:04d}")
+        new_version = int(f"{current_date}{sequence:02d}")  # 確保不超過11字符
         logger.info(f'Generated new version number: {new_version} (current: {current_version})')
         return new_version
         
