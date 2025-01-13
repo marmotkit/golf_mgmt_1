@@ -105,7 +105,13 @@ def process_excel_data(df):
                 member_number = str(row['會員編號']).strip() if pd.notna(row['會員編號']) else None
                 is_guest = str(row['會員類型']).strip() == '來賓' if pd.notna(row['會員類型']) else False
                 is_admin = str(row['是否為管理員']).strip() in ['是', '1', 'True', 'true'] if pd.notna(row['是否為管理員']) else False
-                handicap = float(row['差點']) if pd.notna(row['差點']) else None
+                
+                # 特別處理差點欄位
+                try:
+                    handicap = float(str(row['差點']).strip()) if pd.notna(row['差點']) else None
+                except (ValueError, TypeError):
+                    handicap = None
+                    logger.warning(f'Invalid handicap value in row {index + 1}: {row["差點"]}')
                 
                 # 記錄處理後的資料
                 member_data = {
@@ -121,8 +127,8 @@ def process_excel_data(df):
                 logger.info(f'Processed data: {member_data}')
 
                 # 檢查必要欄位是否有值
-                if not member_number or not account or not chinese_name:
-                    error_msg = f"第 {index + 2} 行資料驗證失敗: 會員編號({member_number})、帳號({account})和中文姓名({chinese_name})為必填欄位"
+                if not member_number or not chinese_name:  
+                    error_msg = f"第 {index + 2} 行資料驗證失敗: 會員編號({member_number})和中文姓名({chinese_name})為必填欄位"
                     logger.error(error_msg)
                     row_errors.append(error_msg)
                     continue
@@ -139,7 +145,8 @@ def process_excel_data(df):
                     logger.info(f'Updating existing member: {member_number}')
                     # 更新現有會員資料
                     for key, value in member_data.items():
-                        setattr(member, key, value)
+                        if value is not None:  
+                            setattr(member, key, value)
 
                 # 創建版本記錄
                 version = MemberVersion(
@@ -157,6 +164,7 @@ def process_excel_data(df):
                 logger.error(error_msg)
                 logger.error(traceback.format_exc())
                 row_errors.append(error_msg)
+                continue  
 
         # 如果有成功處理的資料，就提交
         if success_count > 0:
