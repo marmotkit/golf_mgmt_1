@@ -4,7 +4,7 @@ import json
 
 class Member(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    account = db.Column(db.String(64), unique=True, nullable=False)
+    account = db.Column(db.String(64), unique=True, nullable=True)  # 允許為空
     chinese_name = db.Column(db.String(64), nullable=False)
     english_name = db.Column(db.String(64))
     department_class = db.Column(db.String(64))  # 系級
