@@ -66,6 +66,11 @@ def process_excel_data(df):
     error_messages = []
     
     try:
+        # 記錄 DataFrame 信息
+        logger.info(f'DataFrame info: {df.info()}')
+        logger.info(f'DataFrame columns: {df.columns.tolist()}')
+        logger.info(f'DataFrame shape: {df.shape}')
+        
         # 第一步：驗證所有資料
         required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員']
         missing_columns = [col for col in required_columns if col not in df.columns]
@@ -90,44 +95,48 @@ def process_excel_data(df):
         
         for index, row in df.iterrows():
             try:
-                logger.info(f'Processing row {index + 1}')
+                logger.info(f'Processing row {index + 1}: {row.to_dict()}')
+                
+                # 檢查並清理資料
+                account = str(row['帳號']).strip() if pd.notna(row['帳號']) else None
+                chinese_name = str(row['中文姓名']).strip() if pd.notna(row['中文姓名']) else None
+                english_name = str(row['英文姓名']).strip() if pd.notna(row['英文姓名']) else None
+                department_class = str(row['系級']).strip() if pd.notna(row['系級']) else None
+                member_number = str(row['會員編號']).strip() if pd.notna(row['會員編號']) else None
+                is_guest = str(row['會員類型']).strip() == '來賓' if pd.notna(row['會員類型']) else False
+                is_admin = str(row['是否為管理員']).strip() in ['是', '1', 'True', 'true'] if pd.notna(row['是否為管理員']) else False
+                handicap = float(row['差點']) if pd.notna(row['差點']) else None
+                
+                # 記錄處理後的資料
                 member_data = {
-                    'account': str(row['帳號']).strip(),
-                    'chinese_name': str(row['中文姓名']).strip(),
-                    'english_name': str(row['英文姓名']).strip() if pd.notna(row['英文姓名']) else None,
-                    'department_class': str(row['系級']).strip() if pd.notna(row['系級']) else None,
-                    'member_number': str(row['會員編號']).strip() if pd.notna(row['會員編號']) else None,
-                    'is_guest': str(row['會員類型']).strip() == '來賓',
-                    'is_admin': str(row['是否為管理員']).strip() in ['是', '1', 'True', 'true'],
-                    'handicap': float(row['差點']) if pd.notna(row['差點']) else None
+                    'account': account,
+                    'chinese_name': chinese_name,
+                    'english_name': english_name,
+                    'department_class': department_class,
+                    'member_number': member_number,
+                    'is_guest': is_guest,
+                    'is_admin': is_admin,
+                    'handicap': handicap
                 }
+                logger.info(f'Processed data: {member_data}')
 
                 # 檢查必要欄位是否有值
-                if not member_data['member_number'] or not member_data['account'] or not member_data['chinese_name']:
-                    error_msg = f"第 {index + 2} 行資料驗證失敗: 會員編號、帳號和中文姓名為必填欄位"
+                if not member_number or not account or not chinese_name:
+                    error_msg = f"第 {index + 2} 行資料驗證失敗: 會員編號({member_number})、帳號({account})和中文姓名({chinese_name})為必填欄位"
                     logger.error(error_msg)
                     row_errors.append(error_msg)
                     continue
 
                 # 查找或創建會員記錄
-                member = Member.query.filter_by(member_number=member_data['member_number']).first()
+                member = Member.query.filter_by(member_number=member_number).first()
                 if not member:
-                    logger.info(f'Creating new member: {member_data["member_number"]}')
-                    member = Member(
-                        account=member_data['account'],
-                        chinese_name=member_data['chinese_name'],
-                        english_name=member_data['english_name'],
-                        department_class=member_data['department_class'],
-                        member_number=member_data['member_number'],
-                        is_guest=member_data['is_guest'],
-                        is_admin=member_data['is_admin'],
-                        handicap=member_data['handicap']
-                    )
+                    logger.info(f'Creating new member: {member_number}')
+                    member = Member(**member_data)
                     new_members.append(member)
                     db.session.add(member)
                     db.session.flush()  # 獲取 member.id
                 else:
-                    logger.info(f'Updating existing member: {member_data["member_number"]}')
+                    logger.info(f'Updating existing member: {member_number}')
                     # 更新現有會員資料
                     for key, value in member_data.items():
                         setattr(member, key, value)
@@ -141,10 +150,10 @@ def process_excel_data(df):
                 )
                 version_records.append(version)
                 success_count += 1
-                logger.info(f'Successfully processed member: {member_data["member_number"]}')
+                logger.info(f'Successfully processed member: {member_number}')
                 
             except Exception as e:
-                error_msg = f"第 {index + 2} 行資料驗證失敗: {str(e)}"
+                error_msg = f"第 {index + 2} 行資料處理失敗: {str(e)}"
                 logger.error(error_msg)
                 logger.error(traceback.format_exc())
                 row_errors.append(error_msg)
