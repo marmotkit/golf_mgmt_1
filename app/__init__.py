@@ -50,31 +50,23 @@ def create_app(config_class=Config):
     logger.info(f'SQLALCHEMY_DATABASE_URI: {app.config["SQLALCHEMY_DATABASE_URI"]}')
     
     # 配置 CORS
-    CORS(app, resources={
-        r"/*": {  # 允許所有路徑
-            "origins": [
-                "http://localhost:3000",
-                "https://golf-mgmt-1-frontend.onrender.com",
-                "https://golf-mgmt-1-frontend.onrender.com/"
-            ],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
-            "expose_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True,
-            "max_age": 600,
-            "send_wildcard": False,
-            "automatic_options": True,
-            "vary_header": True
-        }
-    })
-    
+    CORS(app, 
+        origins=[
+            "http://localhost:3000",
+            "https://golf-mgmt-1-frontend.onrender.com"
+        ],
+        allow_credentials=True,
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    )
+    logger.info('CORS configured')
+
     @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
     @app.route('/<path:path>', methods=['OPTIONS'])
     def handle_options(path):
         return '', 204
         
-    logger.info('CORS configured')
-
     try:
         # 初始化資料庫
         db.init_app(app)
