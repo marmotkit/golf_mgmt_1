@@ -73,7 +73,7 @@ def process_excel_data(df):
         logger.info(f'DataFrame first row: {df.iloc[0].to_dict() if len(df) > 0 else "No data"}')
         
         # 第一步：驗證所有資料
-        required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員']
+        required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員', '性別']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             logger.error(f'Missing columns: {missing_columns}')
@@ -148,6 +148,11 @@ def process_excel_data(df):
                     is_admin = admin_value in ['是', '1', 'true', 'yes', 'y']
                     logger.info(f'Is admin processed: {row["是否為管理員"]} -> {is_admin}')
                     
+                    # 性別：轉換為大寫的 'M' 或 'F'
+                    gender_value = str(row['性別']).strip().upper() if pd.notna(row['性別']) else None
+                    gender = gender_value if gender_value in ['M', 'F'] else None
+                    logger.info(f'Gender processed: {row["性別"]} -> {gender}')
+                    
                     # 特別處理差點欄位
                     try:
                         handicap_str = str(row['差點']).strip() if pd.notna(row['差點']) else None
@@ -171,6 +176,7 @@ def process_excel_data(df):
                     'member_number': member_number,
                     'is_guest': is_guest,
                     'is_admin': is_admin,
+                    'gender': gender,
                     'handicap': handicap
                 }
                 logger.info(f'Processed data: {member_data}')
@@ -308,6 +314,7 @@ def get_members():
                     'member_number': member.member_number,
                     'is_guest': member.is_guest,
                     'is_admin': member.is_admin,
+                    'gender': member.gender,
                     'handicap': float(version_data.get('handicap')) if version_data and version_data.get('handicap') is not None else None
                 }
                 result.append(member_dict)
@@ -385,7 +392,7 @@ def upload_members():
                 }), 400
                 
             # 檢查欄位名稱
-            required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員']
+            required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員', '性別']
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 logger.error(f'Missing columns: {missing_columns}')
@@ -491,6 +498,7 @@ def create_member():
             member_number=data.get('member_number'),
             is_guest=data.get('is_guest', False),
             is_admin=data.get('is_admin', False),
+            gender=data.get('gender'),
             handicap=data.get('handicap')
         )
         db.session.add(member)
@@ -561,6 +569,9 @@ def update_member(member_id):
                 
             if 'is_admin' in data:
                 member.is_admin = bool(data['is_admin'])
+                
+            if 'gender' in data:
+                member.gender = str(data['gender'])
                 
             if 'handicap' in data:
                 try:
@@ -692,7 +703,7 @@ def compare_versions():
             new_member_data = new_dict.get(member_number, {})
 
             # 比較所有欄位
-            for field in ['handicap', 'is_guest', 'is_admin', 'chinese_name', 'english_name', 'department_class']:
+            for field in ['handicap', 'is_guest', 'is_admin', 'chinese_name', 'english_name', 'department_class', 'gender']:
                 old_value = old_member_data.get(field)
                 new_value = new_member_data.get(field)
 
@@ -782,7 +793,7 @@ def compare_member_versions():
         # Compare the two versions and return differences
         differences = {}
         fields = ['account', 'chinese_name', 'english_name', 'department_class',
-                  'member_number', 'is_guest', 'is_admin', 'handicap']
+                  'member_number', 'is_guest', 'is_admin', 'gender', 'handicap']
                   
         for field in fields:
             value1 = version1.data.get(field)
