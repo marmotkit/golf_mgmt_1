@@ -51,7 +51,7 @@ function Tournaments() {
 
   useEffect(() => {
     fetchTournaments();
-  }, [fetchTournaments]);
+  }, []);
 
   // 显示提示信息
   const showSnackbar = (message, severity = 'success') => {
