@@ -4,7 +4,7 @@ from app.models import Version
 import traceback
 from datetime import datetime
 import logging
-from sqlalchemy import text
+from sqlalchemy import text, desc
 
 # 配置日誌
 logging.basicConfig(level=logging.DEBUG)
@@ -48,6 +48,7 @@ def ensure_version_exists():
     except Exception as e:
         logger.error(f'Error in ensure_version_exists: {str(e)}')
         logger.error(traceback.format_exc())
+        db.session.rollback()
         raise
 
 @bp.route('/', methods=['GET'])
@@ -64,7 +65,7 @@ def get_version():
         
         # 獲取最新版本
         try:
-            latest_version = db.session.query(Version).order_by(text('created_at DESC')).first()
+            latest_version = db.session.query(Version).order_by(desc(Version.created_at)).first()
             logger.info(f'Latest version: {latest_version.version if latest_version else None}')
             
             if latest_version:
@@ -73,11 +74,13 @@ def get_version():
             return jsonify({'version': '1.0.0'})
         except Exception as e:
             logger.error(f'Error getting latest version: {str(e)}')
+            db.session.rollback()
             return jsonify({'error': 'Failed to get latest version', 'details': str(e)}), 500
             
     except Exception as e:
         logger.error(f'Unexpected error in get_version: {str(e)}')
         logger.error(traceback.format_exc())
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @bp.route('/description', methods=['GET'])
@@ -94,7 +97,7 @@ def get_version_description():
         
         # 獲取最新版本
         try:
-            latest_version = db.session.query(Version).order_by(text('created_at DESC')).first()
+            latest_version = db.session.query(Version).order_by(desc(Version.created_at)).first()
             logger.info(f'Latest version description: {latest_version.description if latest_version else None}')
             
             if latest_version:
@@ -103,9 +106,11 @@ def get_version_description():
             return jsonify({'description': '初始版本'})
         except Exception as e:
             logger.error(f'Error getting latest version description: {str(e)}')
+            db.session.rollback()
             return jsonify({'error': 'Failed to get latest version description', 'details': str(e)}), 500
             
     except Exception as e:
         logger.error(f'Unexpected error in get_version_description: {str(e)}')
         logger.error(traceback.format_exc())
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
