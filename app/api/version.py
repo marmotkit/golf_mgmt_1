@@ -8,23 +8,21 @@ bp = Blueprint('version', __name__)
 @bp.route('/', methods=['GET'])
 def get_version():
     try:
-        # 確保使用正確的表名
-        latest_version = db.session.query(Version)\
-            .order_by(Version.created_at.desc())\
-            .first()
+        # 使用原生 SQL 查詢
+        result = db.session.execute('SELECT version FROM versions ORDER BY created_at DESC LIMIT 1')
+        row = result.fetchone()
         
-        if latest_version:
-            return jsonify({'version': latest_version.version})
+        if row:
+            return jsonify({'version': row[0]})
         
-        # 如果沒有版本記錄，創建一個初始版本
-        initial_version = Version(
-            version='1.0.0',
-            description='初始版本'
+        # 如果沒有版本記錄，使用原生 SQL 創建
+        db.session.execute(
+            'INSERT INTO versions (version, description, created_at, updated_at) VALUES (:version, :description, NOW(), NOW())',
+            {'version': '1.0.0', 'description': '初始版本'}
         )
-        db.session.add(initial_version)
         db.session.commit()
         
-        return jsonify({'version': initial_version.version})
+        return jsonify({'version': '1.0.0'})
     except Exception as e:
         current_app.logger.error(f'Error getting version: {str(e)}')
         current_app.logger.error(traceback.format_exc())
@@ -33,23 +31,21 @@ def get_version():
 @bp.route('/description', methods=['GET'])
 def get_version_description():
     try:
-        # 確保使用正確的表名
-        latest_version = db.session.query(Version)\
-            .order_by(Version.created_at.desc())\
-            .first()
+        # 使用原生 SQL 查詢
+        result = db.session.execute('SELECT description FROM versions ORDER BY created_at DESC LIMIT 1')
+        row = result.fetchone()
         
-        if latest_version:
-            return jsonify({'description': latest_version.description or ''})
+        if row:
+            return jsonify({'description': row[0] or ''})
             
-        # 如果沒有版本記錄，創建一個初始版本
-        initial_version = Version(
-            version='1.0.0',
-            description='初始版本'
+        # 如果沒有版本記錄，使用原生 SQL 創建
+        db.session.execute(
+            'INSERT INTO versions (version, description, created_at, updated_at) VALUES (:version, :description, NOW(), NOW())',
+            {'version': '1.0.0', 'description': '初始版本'}
         )
-        db.session.add(initial_version)
         db.session.commit()
         
-        return jsonify({'description': initial_version.description})
+        return jsonify({'description': '初始版本'})
     except Exception as e:
         current_app.logger.error(f'Error getting version description: {str(e)}')
         current_app.logger.error(traceback.format_exc())
