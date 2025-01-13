@@ -263,79 +263,74 @@ def upload_members():
     try:
         if 'file' not in request.files:
             logger.error('No file in request')
-            return jsonify({'error': 'No file provided'}), 400
+            return jsonify({
+                'error': '未提供檔案',
+                'error_messages': ['請選擇要上傳的 Excel 檔案'],
+                'success_count': 0
+            }), 400
             
         file = request.files['file']
         logger.info(f'Received file: {file.filename}')
         
         if file.filename == '':
             logger.error('Empty filename')
-            return jsonify({'error': 'No file selected'}), 400
+            return jsonify({
+                'error': '未選擇檔案',
+                'error_messages': ['請選擇要上傳的 Excel 檔案'],
+                'success_count': 0
+            }), 400
             
         if not file.filename.endswith('.xlsx'):
             logger.error('Invalid file type')
-            return jsonify({'error': 'Only .xlsx files are allowed'}), 400
+            return jsonify({
+                'error': '檔案格式錯誤',
+                'error_messages': ['只允許上傳 .xlsx 格式的檔案'],
+                'success_count': 0
+            }), 400
 
         # Ensure upload directory exists
         upload_dir = ensure_upload_dir()
         
+        # Save file with secure filename
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(upload_dir, filename)
+        file.save(filepath)
+        logger.info(f'File saved to: {filepath}')
+        
+        # Read Excel file
         try:
-            # Save file temporarily
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(upload_dir, filename)
-            logger.info(f'Saving file to {filepath}')
-            file.save(filepath)
-
-            # Read Excel file
-            logger.info('Reading Excel file')
             df = pd.read_excel(filepath)
-            logger.info(f'Excel columns: {df.columns.tolist()}')
-            
-            # Remove temporary file
-            os.remove(filepath)
-            
-            # 處理列名映射
-            df = df.rename(columns={
-                '會員/來賓': '會員類型',
-                '最新差點': '差點'
-            })
-            
-            # Validate required columns
-            required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                logger.error(f'Missing columns: {missing_columns}')
-                logger.error(f'Excel columns: {df.columns.tolist()}')
-                return jsonify({
-                    'error': f'Missing columns: {", ".join(missing_columns)}',
-                    'required': required_columns,
-                    'provided': df.columns.tolist()
-                }), 400
-
-            success_count, error_messages = process_excel_data(df)
-            
-            response = {
-                'success_count': success_count,
-                'error_messages': error_messages
-            }
-            
-            if error_messages:
-                response['error'] = '部分資料處理失敗，請檢查錯誤訊息'
-                return jsonify(response), 400
-                
-            return jsonify(response), 200
-            
+            logger.info(f'Excel file read successfully: {len(df)} rows')
         except Exception as e:
-            logger.error(f'Error processing Excel file: {str(e)}')
+            logger.error(f'Error reading Excel file: {str(e)}')
+            return jsonify({
+                'error': 'Excel 檔案讀取失敗',
+                'error_messages': [str(e)],
+                'success_count': 0
+            }), 400
+        
+        # Process data
+        try:
+            result = process_excel_data(df)
+            logger.info('Data processed successfully')
+            return jsonify(result)
+        except Exception as e:
+            logger.error(f'Error processing data: {str(e)}')
             logger.error(traceback.format_exc())
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            return jsonify({'error': f'Error processing file: {str(e)}'}), 400
+            return jsonify({
+                'error': '部分資料處理失敗，請檢查錯誤訊息',
+                'error_messages': [str(e)],
+                'success_count': 0
+            }), 400
             
     except Exception as e:
-        logger.error(f'Unexpected error: {str(e)}')
+        logger.error(f'Unexpected error in upload: {str(e)}')
         logger.error(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': '檔案上傳失敗',
+            'error_messages': [str(e)],
+            'success_count': 0
+        }), 500
 
 @bp.route('/batch-delete', methods=['POST'])
 def batch_delete_members():
