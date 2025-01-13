@@ -3,7 +3,8 @@ from app.models import Member, Tournament, YearlyChampion, db, Announcement, Sys
 from datetime import datetime
 from sqlalchemy import func
 import traceback
-from app.api import bp
+
+bp = Blueprint('dashboard', __name__)
 
 @bp.route('/dashboard/stats', methods=['GET'])
 def get_dashboard_stats():
