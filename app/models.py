@@ -149,6 +149,23 @@ class MemberVersion(db.Model):
     def __repr__(self):
         return f'<MemberVersion {self.member_id}-{self.version}>'
 
+class Version(db.Model):
+    __tablename__ = 'versions'
+    id = db.Column(db.Integer, primary_key=True)
+    version = db.Column(db.String(20), nullable=False)
+    description = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'version': self.version,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
 class YearlyChampion(db.Model):
     __tablename__ = 'yearly_champions'
     
