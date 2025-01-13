@@ -54,17 +54,25 @@ def create_app(config_class=Config):
         r"/*": {  # 允許所有路徑
             "origins": [
                 "http://localhost:3000",
-                "https://golf-mgmt-1-frontend.onrender.com"
+                "https://golf-mgmt-1-frontend.onrender.com",
+                "https://golf-mgmt-1-frontend.onrender.com/"
             ],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
             "expose_headers": ["Content-Type", "Authorization"],
             "supports_credentials": True,
             "max_age": 600,
             "send_wildcard": False,
-            "automatic_options": True
+            "automatic_options": True,
+            "vary_header": True
         }
     })
+    
+    @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
+    @app.route('/<path:path>', methods=['OPTIONS'])
+    def handle_options(path):
+        return '', 204
+        
     logger.info('CORS configured')
 
     try:
