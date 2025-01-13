@@ -6,7 +6,7 @@ import traceback
 
 bp = Blueprint('dashboard', __name__)
 
-@bp.route('/dashboard/stats', methods=['GET'])
+@bp.route('/stats', methods=['GET'])
 def get_dashboard_stats():
     try:
         current_app.logger.info("開始獲取儀表板統計數據")
@@ -60,7 +60,7 @@ def get_dashboard_stats():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions', methods=['GET'])
+@bp.route('/champions', methods=['GET'])
 def get_champions():
     try:
         champions = YearlyChampion.query.order_by(YearlyChampion.date.desc()).all()
@@ -73,7 +73,7 @@ def get_champions():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions', methods=['POST'])
+@bp.route('/champions', methods=['POST'])
 def create_champion():
     try:
         data = request.get_json()
@@ -99,7 +99,7 @@ def create_champion():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions/<int:id>', methods=['PUT'])
+@bp.route('/champions/<int:id>', methods=['PUT'])
 def update_champion(id):
     try:
         champion = YearlyChampion.query.get_or_404(id)
@@ -124,7 +124,7 @@ def update_champion(id):
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/champions/<int:id>', methods=['DELETE'])
+@bp.route('/champions/<int:id>', methods=['DELETE'])
 def delete_champion(id):
     try:
         champion = YearlyChampion.query.get_or_404(id)
@@ -140,7 +140,7 @@ def delete_champion(id):
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements', methods=['GET'])
+@bp.route('/announcements', methods=['GET'])
 def get_announcements():
     try:
         announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
@@ -153,7 +153,7 @@ def get_announcements():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements', methods=['POST'])
+@bp.route('/announcements', methods=['POST'])
 def create_announcement():
     try:
         data = request.get_json()
@@ -173,7 +173,7 @@ def create_announcement():
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements/<int:id>', methods=['PUT'])
+@bp.route('/announcements/<int:id>', methods=['PUT'])
 def update_announcement(id):
     try:
         announcement = Announcement.query.get_or_404(id)
@@ -194,7 +194,7 @@ def update_announcement(id):
             'details': str(e)
         }), 500
 
-@bp.route('/dashboard/announcements/<int:id>', methods=['DELETE'])
+@bp.route('/announcements/<int:id>', methods=['DELETE'])
 def delete_announcement(id):
     try:
         announcement = Announcement.query.get_or_404(id)

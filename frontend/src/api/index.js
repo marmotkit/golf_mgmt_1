@@ -13,7 +13,8 @@ const api = axios.create({
 // 添加请求拦截器
 api.interceptors.request.use(
   (config) => {
-    console.log('Request:', config);
+    console.log('Making request:', config.method.toUpperCase(), config.url);
+    console.log('Request headers:', config.headers);
     return config;
   },
   (error) => {
@@ -25,7 +26,6 @@ api.interceptors.request.use(
 // 添加响应拦截器
 api.interceptors.response.use(
   (response) => {
-    console.log('Response:', response);
     return response;
   },
   (error) => {
@@ -41,6 +41,16 @@ export const membersApi = {
   create: (data) => api.post('/members', data),
   update: (id, data) => api.put(`/members/${id}`, data),
   delete: (id) => api.delete(`/members/${id}`),
+  upload: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/members/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  getVersions: () => api.get('/members/versions'),
 };
 
 // 賽事管理 API
@@ -79,10 +89,25 @@ export const gamesApi = {
   updatePrize: (gameId, position, data) => api.put(`/games/${gameId}/prizes/${position}`, data),
 };
 
+// 儀表板 API
+export const dashboardApi = {
+  getStats: () => api.get('/dashboard/stats'),
+  getAnnouncements: () => api.get('/dashboard/announcements'),
+  createAnnouncement: (data) => api.post('/dashboard/announcements', data),
+  updateAnnouncement: (id, data) => api.put(`/dashboard/announcements/${id}`, data),
+  deleteAnnouncement: (id) => api.delete(`/dashboard/announcements/${id}`),
+  getChampions: () => api.get('/dashboard/champions'),
+  createChampion: (data) => api.post('/dashboard/champions', data),
+  updateChampion: (id, data) => api.put(`/dashboard/champions/${id}`, data),
+  deleteChampion: (id) => api.delete(`/dashboard/champions/${id}`),
+};
+
 // 版本管理 API
 export const versionApi = {
   getVersion: () => api.get('/version'),
   getDescription: () => api.get('/version/description'),
+  updateVersion: (data) => api.put('/version', data),
+  updateDescription: (data) => api.put('/version/description', data),
 };
 
 export default api;
