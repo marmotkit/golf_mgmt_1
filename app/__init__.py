@@ -51,25 +51,17 @@ def create_app(config_class=Config):
     
     # 配置 CORS
     CORS(app, 
-        origins=[
-            "http://localhost:3000",
-            "https://golf-mgmt-1-frontend.onrender.com"
-        ],
-        supports_credentials=True,
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        expose_headers=["Content-Type", "Authorization"]
+        resources={
+            r"/api/*": {
+                "origins": ["https://golf-mgmt-1-frontend.onrender.com"],
+                "supports_credentials": True,
+                "allow_headers": ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "expose_headers": ["Content-Type", "Authorization"]
+            }
+        }
     )
     
-    # 添加 CORS 預檢響應頭
-    @app.after_request
-    def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', 'https://golf-mgmt-1-frontend.onrender.com')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With,Accept,Origin')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
-        
     logger.info('CORS configured')
 
     @app.route('/', defaults={'path': ''}, methods=['OPTIONS'])
