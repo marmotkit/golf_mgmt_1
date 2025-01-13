@@ -223,7 +223,7 @@ def clear_scores():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-@bp.route('/scores/upload', methods=['POST'])
+@bp.route('/upload', methods=['POST'])
 def upload_scores():
     try:
         current_app.logger.info("開始處理成績上傳請求")
@@ -251,37 +251,38 @@ def upload_scores():
             return jsonify({'error': '不支持的文件格式'}), 400
             
         # 保存文件到臨時目錄
-        temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], secure_filename(file.filename))
-        os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-        file.save(temp_path)
+        temp_path = os.path.join(current_app.instance_path, 'uploads')
+        os.makedirs(temp_path, exist_ok=True)
+        temp_file = os.path.join(temp_path, secure_filename(file.filename))
+        file.save(temp_file)
         
         # 讀取Excel文件
         current_app.logger.info("開始讀取Excel文件")
         try:
             # 嘗試使用 openpyxl 引擎
             try:
-                df = pd.read_excel(temp_path, engine='openpyxl')
+                df = pd.read_excel(temp_file, engine='openpyxl')
             except Exception as e1:
                 current_app.logger.warning(f"使用 openpyxl 引擎失敗: {str(e1)}")
                 # 如果失敗，嘗試使用 xlrd 引擎
                 try:
-                    df = pd.read_excel(temp_path, engine='xlrd')
+                    df = pd.read_excel(temp_file, engine='xlrd')
                 except Exception as e2:
                     current_app.logger.warning(f"使用 xlrd 引擎失敗: {str(e2)}")
                     # 最後嘗試不指定引擎
-                    df = pd.read_excel(temp_path)
+                    df = pd.read_excel(temp_file)
             
             current_app.logger.info(f"Excel列名: {df.columns.tolist()}")
             
             # 清理臨時文件
-            os.remove(temp_path)
+            os.remove(temp_file)
             
         except Exception as e:
             current_app.logger.error(f"讀取Excel文件失敗: {str(e)}")
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
             return jsonify({'error': '讀取Excel文件失敗', 'details': str(e)}), 400
-        
+
         # 列名映射（支持多種可能的列名）
         column_mappings = {
             '會員編號': ['會員編號', '會員號碼', 'Member No', 'MemberNo'],
@@ -316,7 +317,7 @@ def upload_scores():
                 'error': f'缺少必要的列: {", ".join(missing_columns)}',
                 'found_columns': df.columns.tolist()  # 返回找到的列名，以便調試
             }), 400
-            
+
         # 重命名列以統一處理
         df = df.rename(columns={v: k for k, v in column_map.items()})
             
@@ -329,7 +330,6 @@ def upload_scores():
         for index, row in df.iterrows():
             try:
                 current_app.logger.info(f"處理第 {index + 1} 行數據")
-                current_app.logger.info(f"行數據: {row.to_dict()}")
                 
                 # 數據預處理和驗證
                 member_number = str(row['會員編號']).strip()
@@ -358,7 +358,7 @@ def upload_scores():
                     new_handicap = round(float(row['新差點']), 2) if pd.notna(row['新差點']) else None
                 except ValueError as e:
                     raise ValueError(f"差點相關欄位必須為數值")
-                
+
                 try:
                     points = int(row['積分']) if pd.notna(row['積分']) else None
                 except ValueError as e:
@@ -384,7 +384,6 @@ def upload_scores():
                 
             except Exception as row_error:
                 current_app.logger.error(f"處理第 {index + 1} 行數據時發生錯誤: {str(row_error)}")
-                current_app.logger.error(f"行數據: {row.to_dict()}")
                 db.session.rollback()
                 return jsonify({
                     'error': f'處理第 {index + 1} 行數據時發生錯誤',
