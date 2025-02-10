@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, send_file
 from werkzeug.utils import secure_filename
 import pandas as pd
 import os
@@ -9,6 +9,7 @@ import traceback
 from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy import Boolean
+import io
 
 bp = Blueprint('members', __name__)
 
@@ -965,3 +966,76 @@ def get_average_handicap():
             'error': 'Failed to calculate average handicap',
             'details': str(e)
         }), 500
+
+@bp.route('/export', methods=['GET'])
+def export_members():
+    """匯出會員資料為 Excel 檔案"""
+    try:
+        # 從查詢參數中獲取版本號，如果沒有指定則使用最新版本
+        version = request.args.get('version')
+        
+        # 獲取最新版本號
+        latest_version = db.session.query(MemberVersion.version)\
+            .order_by(MemberVersion.version.desc())\
+            .first()
+            
+        if not version and latest_version:
+            version = latest_version[0]
+        elif not latest_version:
+            logger.warning('No member versions found in database')
+            return jsonify({'error': '沒有會員資料可供匯出'}), 400
+            
+        logger.info(f'Exporting members for version: {version}')
+        
+        # 使用指定版本號獲取會員資料
+        members = db.session.query(Member).join(MemberVersion)\
+            .filter(MemberVersion.version == version)\
+            .order_by(Member.member_number)\
+            .all()
+            
+        if not members:
+            return jsonify({'error': f'版本 {version} 沒有會員資料'}), 404
+            
+        # 準備 Excel 數據
+        data = []
+        for member in members:
+            data.append({
+                '會員編號': member.member_number,
+                '帳號': member.account,
+                '中文姓名': member.chinese_name,
+                '英文姓名': member.english_name,
+                '系級': member.department_class,
+                '會員類型': '來賓' if member.is_guest else '會員',
+                '管理權限': '是' if member.is_admin else '否',
+                '差點': member.handicap
+            })
+            
+        # 創建 DataFrame
+        df = pd.DataFrame(data)
+        
+        # 創建一個 BytesIO 對象來保存 Excel 文件
+        excel_file = io.BytesIO()
+        
+        # 將 DataFrame 寫入 Excel
+        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='會員資料')
+            
+        # 將指針移到文件開頭
+        excel_file.seek(0)
+        
+        # 生成下載文件名
+        current_time = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f'members_v{version}_{current_time}.xlsx'
+        
+        # 返回 Excel 文件
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+            
+    except Exception as e:
+        logger.error(f'Error exporting members: {str(e)}')
+        logger.error(traceback.format_exc())
+        return jsonify({'error': '匯出會員資料失敗'}), 500
