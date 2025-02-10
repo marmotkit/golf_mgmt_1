@@ -673,6 +673,15 @@ const Members = () => {
           </Button>
           <Button
             variant="outlined"
+            startIcon={<DownloadIcon />}
+            onClick={() => {
+              window.open('/api/members/template', '_blank');
+            }}
+          >
+            下載範本
+          </Button>
+          <Button
+            variant="outlined"
             startIcon={<CompareArrowsIcon />}
             onClick={() => setCompareDialogOpen(true)}
           >
@@ -735,17 +744,8 @@ const Members = () => {
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, my: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              請先下載範本，依照範本格式填寫會員資料後再上傳。
+              請依照 Excel 範本格式填寫會員資料後上傳。
             </Typography>
-            <Button
-              variant="outlined"
-              startIcon={<DownloadIcon />}
-              onClick={() => {
-                window.open('/api/members/template', '_blank');
-              }}
-            >
-              下載範本
-            </Button>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
               必填欄位：
               <ul>
