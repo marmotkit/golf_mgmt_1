@@ -115,8 +115,8 @@ def process_excel_data(df):
 
                 # 驗證性別
                 gender = str(row['性別']).strip()
-                if gender not in ['男', '女']:
-                    row_errors.append(f'性別欄位錯誤：{gender}（必須是「男」或「女」）')
+                if gender not in ['M', 'F']:
+                    row_errors.append(f'第 {idx + 2} 行：性別必須是「M」或「F」，目前值為：{gender}')
                     logger.error(f'第 {idx + 2} 行性別欄位錯誤：{gender}')
 
                 # 如果有錯誤，加入到錯誤列表
@@ -316,8 +316,8 @@ def upload_members():
 
                 # 驗證性別
                 gender = str(row['性別']).strip()
-                if gender not in ['男', '女']:
-                    row_errors.append(f'第 {idx + 2} 行：性別必須是「男」或「女」，目前值為：{gender}')
+                if gender not in ['M', 'F']:
+                    row_errors.append(f'第 {idx + 2} 行：性別必須是「M」或「F」，目前值為：{gender}')
 
                 if row_errors:
                     error_messages.extend(row_errors)
@@ -1019,7 +1019,7 @@ def download_template():
             '系級': ['資工系', '企管系'],
             '會員類型': ['會員', '來賓'],
             '是否為管理員': ['是', '否'],
-            '性別': ['男', '女'],
+            '性別': ['M', 'F'],  # 修改為使用 M/F
             '差點': [0, 0],
         }
         
