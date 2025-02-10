@@ -388,10 +388,11 @@ function Scores() {
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="contained"
-                    color="success"
+                    color="primary"
+                    startIcon={<DownloadIcon />}
                     onClick={handleExportScores}
                     disabled={scores.length === 0}
-                    startIcon={<DownloadIcon />}
+                    sx={{ mr: 2 }}
                   >
                     匯出成績
                   </Button>
@@ -405,6 +406,7 @@ function Scores() {
                     variant="outlined"
                     color="error"
                     onClick={handleClearScores}
+                    sx={{ ml: 2 }}
                   >
                     清除所有成績
                   </Button>
@@ -412,6 +414,32 @@ function Scores() {
               </Box>
 
               <Box sx={{ height: 400, width: '100%' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<DownloadIcon />}
+                    onClick={handleExportScores}
+                    disabled={scores.length === 0}
+                    sx={{ mr: 2 }}
+                  >
+                    匯出成績
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenUploadDialog(true)}
+                  >
+                    匯入成績
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={handleClearScores}
+                    sx={{ ml: 2 }}
+                  >
+                    清除所有成績
+                  </Button>
+                </Box>
                 <DataGrid
                   rows={scores}
                   columns={columns}
