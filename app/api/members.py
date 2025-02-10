@@ -1039,18 +1039,22 @@ def export_members():
             
         logger.info(f'Exporting members for version: {version}')
         
-        # 使用指定版本號獲取會員資料
-        members = db.session.query(Member).join(MemberVersion)\
+        # 使用指定版本號獲取會員資料，包括版本資料
+        members_data = db.session.query(Member, MemberVersion)\
+            .join(MemberVersion)\
             .filter(MemberVersion.version == version)\
             .order_by(Member.member_number)\
             .all()
             
-        if not members:
+        if not members_data:
             return jsonify({'error': f'版本 {version} 沒有會員資料'}), 404
             
         # 準備 Excel 數據
         data = []
-        for member in members:
+        for member, version_data in members_data:
+            # 從版本資料中獲取差點
+            handicap = version_data.data.get('handicap') if version_data.data else member.handicap
+            
             data.append({
                 '會員編號': member.member_number,
                 '帳號': member.account,
@@ -1059,7 +1063,7 @@ def export_members():
                 '系級': member.department_class,
                 '會員類型': '來賓' if member.is_guest else '會員',
                 '管理權限': '是' if member.is_admin else '否',
-                '差點': member.handicap
+                '差點': handicap
             })
             
         # 創建 DataFrame
