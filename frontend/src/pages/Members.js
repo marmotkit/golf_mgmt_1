@@ -663,7 +663,8 @@ const Members = () => {
               color="primary"
               startIcon={<DownloadIcon />}
               onClick={() => {
-                window.open('/api/members/template', '_blank');
+                const baseUrl = process.env.REACT_APP_API_BASE_URL || '';
+                window.open(`${baseUrl}/api/members/template`, '_blank');
               }}
             >
               下載範本
