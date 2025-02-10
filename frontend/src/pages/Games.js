@@ -49,6 +49,7 @@ function Games() {
   });
 
   useEffect(() => {
+    console.log('Fetching games...');
     fetchGames();
   }, []);
 
