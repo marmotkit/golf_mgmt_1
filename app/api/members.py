@@ -260,7 +260,7 @@ def upload_members():
         
         try:
             logger.info('Reading Excel file...')
-            df = pd.read_excel(filepath, dtype=str)  # 先將所有欄位讀取為字符串
+            df = pd.read_excel(filepath, dtype=str, na_filter=False)  # 修改這裡，不過濾 NA 值
             logger.info(f'Excel file read successfully: {len(df)} rows')
             logger.info(f'Columns: {df.columns.tolist()}')
             
@@ -302,8 +302,8 @@ def upload_members():
                         'member_number': row['會員編號'],
                         'account': row['帳號'],
                         'chinese_name': row.get('中文姓名', ''),
-                        'english_name': row.get('英文姓名', ''),
-                        'department_class': row.get('系級', ''),
+                        'english_name': row.get('英文姓名', ''),  # 允許任何值
+                        'department_class': row.get('系級', ''),  # 允許任何值
                         'is_guest': row['會員類型'] == '來賓',
                         'is_admin': row['是否為管理員'] == '是',
                         'gender': row['性別'],
