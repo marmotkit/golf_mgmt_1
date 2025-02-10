@@ -278,88 +278,101 @@ def upload_members():
                     'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
                     'success_count': 0
                 }), 400
-                
-        except Exception as e:
-            logger.error(f'Error reading Excel file: {str(e)}')
-            logger.error(traceback.format_exc())
-            return jsonify({
-                'error': 'Excel 檔案讀取失敗',
-                'error_messages': [f'檔案讀取錯誤：{str(e)}'],
-                'success_count': 0
-            }), 400
-            
-        try:
-            logger.info('Processing Excel data...')
-            processed_df = process_excel_data(df)
-            success_count = len(processed_df)
-            logger.info(f'Successfully processed {success_count} rows')
-            
-            if success_count == 0:
+
+            # 檢查必要欄位
+            required_columns = ['會員編號', '會員類型', '帳號', '是否為管理員', '性別']
+            missing_columns = [col for col in required_columns if col not in df.columns]
+            if missing_columns:
                 return jsonify({
-                    'error': '沒有有效的資料可以處理',
-                    'error_messages': ['所有資料行都包含錯誤'],
+                    'error': '缺少必要欄位',
+                    'error_messages': [f'缺少以下必要欄位：{", ".join(missing_columns)}'],
                     'success_count': 0
                 }), 400
+
+            # 清理數據
+            for col in df.columns:
+                if df[col].dtype == object:
+                    df[col] = df[col].astype(str).str.strip()
+                    df[col] = df[col].replace(['(null)', 'null', 'nan', ''], '')
+
+            # 驗證每一行數據
+            error_messages = []
+            valid_rows = []
+            
+            for idx, row in df.iterrows():
+                row_errors = []
                 
-            # 處理成功的資料
+                # 檢查必填欄位
+                for col in required_columns:
+                    if pd.isna(row[col]) or str(row[col]).strip() == '':
+                        row_errors.append(f'第 {idx + 2} 行：{col} 不能為空')
+
+                # 驗證會員類型
+                member_type = str(row['會員類型']).strip()
+                if member_type not in ['會員', '來賓']:
+                    row_errors.append(f'第 {idx + 2} 行：會員類型必須是「會員」或「來賓」，目前值為：{member_type}')
+
+                # 驗證管理員欄位
+                is_admin = str(row['是否為管理員']).strip()
+                if is_admin not in ['是', '否']:
+                    row_errors.append(f'第 {idx + 2} 行：是否為管理員必須是「是」或「否」，目前值為：{is_admin}')
+
+                # 驗證性別
+                gender = str(row['性別']).strip()
+                if gender not in ['男', '女']:
+                    row_errors.append(f'第 {idx + 2} 行：性別必須是「男」或「女」，目前值為：{gender}')
+
+                if row_errors:
+                    error_messages.extend(row_errors)
+                else:
+                    valid_rows.append(row)
+
+            if error_messages:
+                return jsonify({
+                    'error': '資料驗證失敗',
+                    'error_messages': error_messages,
+                    'success_count': 0
+                }), 400
+
+            # 處理有效的資料
             version_number = generate_version_number()
-            for _, row in processed_df.iterrows():
-                try:
-                    member_data = {
-                        'member_number': row['會員編號'],
-                        'account': row['帳號'],
-                        'chinese_name': row.get('中文姓名', ''),
-                        'english_name': row.get('英文姓名', ''),
-                        'department_class': row.get('系級', ''),
-                        'is_guest': row['會員類型'] == '來賓',
-                        'is_admin': row['是否為管理員'] == '是',
-                        'gender': row['性別'],
-                        'handicap': float(row['差點']) if pd.notna(row.get('差點')) else None
-                    }
-                    
-                    # 檢查會員是否已存在
-                    member = Member.query.filter_by(member_number=member_data['member_number']).first()
-                    if not member:
-                        member = Member(**member_data)
-                        db.session.add(member)
-                        db.session.flush()
-                    else:
-                        for key, value in member_data.items():
-                            setattr(member, key, value)
-                    
-                    # 創建版本記錄
-                    version = MemberVersion(
-                        member_id=member.id,
-                        version=version_number,
-                        data=member_data,
-                        created_at=datetime.now()
-                    )
-                    db.session.add(version)
-                    
-                except Exception as e:
-                    logger.error(f'Error processing row: {row.to_dict()}')
-                    logger.error(str(e))
-                    db.session.rollback()
-                    raise
-                    
+            for row in valid_rows:
+                member_data = {
+                    'member_number': row['會員編號'],
+                    'account': row['帳號'],
+                    'chinese_name': row.get('中文姓名', ''),
+                    'english_name': row.get('英文姓名', ''),
+                    'department_class': row.get('系級', ''),
+                    'is_guest': row['會員類型'] == '來賓',
+                    'is_admin': row['是否為管理員'] == '是',
+                    'gender': row['性別'],
+                    'handicap': float(row['差點']) if pd.notna(row.get('差點')) else None
+                }
+
+                member = Member.query.filter_by(member_number=member_data['member_number']).first()
+                if not member:
+                    member = Member(**member_data)
+                    db.session.add(member)
+                    db.session.flush()
+                else:
+                    for key, value in member_data.items():
+                        setattr(member, key, value)
+
+                version = MemberVersion(
+                    member_id=member.id,
+                    version=version_number,
+                    data=member_data,
+                    created_at=datetime.now()
+                )
+                db.session.add(version)
+
             db.session.commit()
             return jsonify({
                 'success': True,
-                'message': f'成功處理 {success_count} 筆資料',
-                'success_count': success_count
+                'message': f'成功處理 {len(valid_rows)} 筆資料',
+                'success_count': len(valid_rows)
             })
-            
-        except ValueError as e:
-            error_messages = str(e).split('\n')
-            logger.error('Validation errors:')
-            for msg in error_messages:
-                logger.error(msg)
-            return jsonify({
-                'error': '資料處理過程中發生錯誤',
-                'error_messages': error_messages,
-                'success_count': 0
-            }), 400
-            
+
         except Exception as e:
             logger.error(f'Error processing data: {str(e)}')
             logger.error(traceback.format_exc())
@@ -368,7 +381,16 @@ def upload_members():
                 'error_messages': [str(e)],
                 'success_count': 0
             }), 400
-            
+
+    except Exception as e:
+        logger.error(f'Unexpected error: {str(e)}')
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'error': '系統錯誤',
+            'error_messages': [str(e)],
+            'success_count': 0
+        }), 500
+
     finally:
         # 清理臨時檔案
         try:
