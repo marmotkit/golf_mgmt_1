@@ -35,6 +35,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import UploadIcon from '@mui/icons-material/Upload';
+import DownloadIcon from '@mui/icons-material/Download';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import axios from '../utils/axios';
 
@@ -568,6 +569,38 @@ const Members = () => {
     );
   };
 
+  const handleDownloadExcel = async () => {
+    try {
+      setLoading(true);
+      const version = currentVersion?.version;
+      const response = await axios.get(
+        `/members/export${version ? `?version=${version}` : ''}`,
+        { responseType: 'blob' }
+      );
+      
+      // 創建下載連結
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `members_${version || 'latest'}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      setSnackbar({ open: true, message: '下載成功', severity: 'success' });
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      setSnackbar({ 
+        open: true, 
+        message: error.response?.data?.error || '下載失敗', 
+        severity: 'error' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -630,6 +663,13 @@ const Members = () => {
             onClick={handleUploadOpen}
           >
             上傳 EXCEL
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<DownloadIcon />}
+            onClick={handleDownloadExcel}
+          >
+            下載 EXCEL
           </Button>
           <Button
             variant="outlined"
