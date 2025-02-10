@@ -603,10 +603,10 @@ const Members = () => {
 
   const handleDownloadTemplate = async () => {
     try {
-      setLoading(true);
-      const response = await axios.get('/members/template', { responseType: 'blob' });
+      const response = await axios.get('/api/members/template', {
+        responseType: 'blob'
+      });
       
-      // 創建下載連結
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -616,16 +616,18 @@ const Members = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
       
-      setSnackbar({ open: true, message: '範本下載成功', severity: 'success' });
-    } catch (error) {
-      console.error('Error downloading template:', error);
-      setSnackbar({ 
-        open: true, 
-        message: error.response?.data?.error || '範本下載失敗', 
-        severity: 'error' 
+      setSnackbar({
+        open: true,
+        message: '範本下載成功',
+        severity: 'success'
       });
-    } finally {
-      setLoading(false);
+    } catch (error) {
+      console.error('下載範本失敗:', error);
+      setSnackbar({
+        open: true,
+        message: '下載範本失敗，請稍後再試',
+        severity: 'error'
+      });
     }
   };
 
