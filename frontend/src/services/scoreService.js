@@ -26,7 +26,7 @@ const handleError = (error) => {
 // 獲取成績列表
 export const getScores = async (tournamentId) => {
   try {
-    const response = await api.get(`/scores?tournament_id=${tournamentId}`);
+    const response = await api.get(`/?tournament_id=${tournamentId}`);
     return response.data;
   } catch (error) {
     handleError(error);
@@ -36,7 +36,7 @@ export const getScores = async (tournamentId) => {
 // 上傳成績
 export const uploadScores = async (tournamentId, formData) => {
   try {
-    const response = await api.post('/scores/upload', formData);
+    const response = await api.post('/upload', formData);
     return response.data;
   } catch (error) {
     handleError(error);
@@ -46,7 +46,7 @@ export const uploadScores = async (tournamentId, formData) => {
 // 清除所有成績
 export const clearScores = async () => {
   try {
-    const response = await api.post('/scores/clear');
+    const response = await api.post('/clear');
     return response.data;
   } catch (error) {
     handleError(error);
@@ -56,7 +56,7 @@ export const clearScores = async () => {
 // 計算年度統計
 export const calculateAnnualStats = async (tournamentIds) => {
   try {
-    const response = await api.post('/scores/annual-stats', { tournament_ids: tournamentIds });
+    const response = await api.post('/annual-stats', { tournament_ids: tournamentIds });
     return response.data;
   } catch (error) {
     handleError(error);
@@ -66,7 +66,7 @@ export const calculateAnnualStats = async (tournamentIds) => {
 // 匯出成績
 export const exportScores = async (tournamentId) => {
   try {
-    const response = await api.get(`/scores/export/${tournamentId}`, {
+    const response = await api.get(`/export/${tournamentId}`, {
       responseType: 'blob'
     });
     return response.data;
