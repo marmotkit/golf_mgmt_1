@@ -11,6 +11,9 @@ from sqlalchemy import func
 from sqlalchemy import Boolean
 import io
 from io import BytesIO
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, Border, PatternFill
+from openpyxl.utils import get_column_letter
 
 bp = Blueprint('members', __name__)
 
@@ -1091,40 +1094,74 @@ def export_members():
 
 @bp.route('/template', methods=['GET'])
 def download_template():
-    """下載會員資料上傳用的 Excel 範本"""
+    """下載會員資料範本"""
     try:
-        # 創建範本數據
-        template_data = {
-            '會員編號': ['M001', 'F001'],  # 範例：M開頭為男性會員，F開頭為女性會員
-            '帳號': ['user1', 'user2'],
-            '中文姓名': ['王小明', '李小華'],
-            '英文姓名': ['Wang, Xiao-Ming', 'Lee, Xiao-Hua'],
-            '系級': ['資工系', '企管系'],
-            '會員/來賓': ['會員', '來賓'],  # 修改欄位名稱
-            '是否為管理員': ['是', '否'],
-            '性別': ['M', 'F'],
-            '最新差點': [0, 0],  # 修改欄位名稱
-        }
+        # 創建一個新的 Excel 工作簿
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "會員資料"
+
+        # 定義欄位順序
+        headers = [
+            '會員/來賓',
+            '帳號',
+            '中文姓名',
+            '英文姓名',
+            '系級',
+            '會員編號',
+            '是否為管理員',
+            '最新差點',
+            '性別'
+        ]
+
+        # 設置欄位寬度
+        for i, header in enumerate(headers, 1):
+            ws.column_dimensions[get_column_letter(i)].width = 15
+
+        # 寫入標題
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col)
+            cell.value = header
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(horizontal='center')
+
+        # 設置樣式
+        border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+
+        # 為標題行添加邊框和填充
+        for col in range(1, len(headers) + 1):
+            cell = ws.cell(row=1, column=col)
+            cell.border = border
+            cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+
+        # 創建臨時文件
+        temp_file = os.path.join(current_app.instance_path, 'member_template.xlsx')
+        os.makedirs(os.path.dirname(temp_file), exist_ok=True)
         
-        df = pd.DataFrame(template_data)
-        
-        # 創建 Excel 檔案
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False, sheet_name='會員資料範本')
-            worksheet = writer.sheets['會員資料範本']
-            
-            # 調整欄寬
-            for idx, col in enumerate(df.columns):
-                max_length = max(
-                    df[col].astype(str).apply(len).max(),
-                    len(col)
-                )
-                worksheet.column_dimensions[chr(65 + idx)].width = max_length + 4
-        
-        output.seek(0)
-        return output.getvalue()
-        
+        # 保存文件
+        wb.save(temp_file)
+
+        # 發送文件
+        return send_file(
+            temp_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='member_template.xlsx'
+        )
+
     except Exception as e:
-        current_app.logger.error(f'生成範本時發生錯誤：{str(e)}')
-        raise
+        current_app.logger.error(f"生成範本時發生錯誤: {str(e)}")
+        return jsonify({'error': '生成範本失敗'}), 500
+
+    finally:
+        # 清理臨時文件
+        try:
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        except Exception as e:
+            current_app.logger.error(f"清理臨時文件時發生錯誤: {str(e)}")
