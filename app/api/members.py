@@ -267,9 +267,9 @@ def upload_members():
         
         try:
             logger.info('Reading Excel file...')
-            df = pd.read_excel(filepath, dtype=str, na_filter=False)  # 修改這裡，不過濾 NA 值
+            df = pd.read_excel(filepath, dtype=str, na_filter=False)
             logger.info(f'Excel file read successfully: {len(df)} rows')
-            logger.info(f'Columns: {df.columns.tolist()}')
+            logger.info(f'Columns found in file: {df.columns.tolist()}')
             
             if len(df) == 0:
                 logger.error('Empty Excel file')
@@ -284,7 +284,7 @@ def upload_members():
             logger.error(traceback.format_exc())
             return jsonify({
                 'error': 'Excel 檔案讀取失敗',
-                'error_messages': [str(e)],
+                'error_messages': [f'檔案讀取錯誤：{str(e)}'],
                 'success_count': 0
             }), 400
             
@@ -309,8 +309,8 @@ def upload_members():
                         'member_number': row['會員編號'],
                         'account': row['帳號'],
                         'chinese_name': row.get('中文姓名', ''),
-                        'english_name': row.get('英文姓名', ''),  # 允許任何值
-                        'department_class': row.get('系級', ''),  # 允許任何值
+                        'english_name': row.get('英文姓名', ''),
+                        'department_class': row.get('系級', ''),
                         'is_guest': row['會員類型'] == '來賓',
                         'is_admin': row['是否為管理員'] == '是',
                         'gender': row['性別'],
@@ -350,9 +350,13 @@ def upload_members():
             })
             
         except ValueError as e:
+            error_messages = str(e).split('\n')
+            logger.error('Validation errors:')
+            for msg in error_messages:
+                logger.error(msg)
             return jsonify({
                 'error': '資料處理過程中發生錯誤',
-                'error_messages': str(e).split('\n'),
+                'error_messages': error_messages,
                 'success_count': 0
             }), 400
             
