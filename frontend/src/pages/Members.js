@@ -164,25 +164,14 @@ const Members = () => {
   };
 
   const handleFileUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-  
-    if (!file.name.endsWith('.xlsx')) {
-      setSnackbar({
-        open: true,
-        message: '只能上傳 Excel (.xlsx) 檔案',
-        severity: 'error',
-      });
-      return;
-    }
-  
-    const formData = new FormData();
-    formData.append('file', file);
-  
     try {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
       setLoading(true);
-      console.log('Uploading file:', file.name);
-      
       const response = await axios({
         method: 'post',
         url: '/members/upload',
@@ -191,33 +180,58 @@ const Members = () => {
           'Content-Type': 'multipart/form-data',
         },
       });
-      
-      console.log('Upload response:', response.data);
-  
-      setSnackbar({
-        open: true,
-        message: `成功上傳 ${response.data.success_count} 筆資料`,
-        severity: 'success',
-      });
-  
-      // 重新獲取資料
-      await fetchVersions();
-      // 等待一段時間確保版本資料已更新
-      setTimeout(async () => {
-        await fetchMembers();
-      }, 1000);
-  
+
+      if (response.data) {
+        setSnackbar({
+          open: true,
+          message: `成功上傳 ${response.data.success_count} 筆資料`,
+          severity: 'success',
+        });
+        
+        // 重新獲取版本列表並設定最新版本
+        try {
+          const versionsResponse = await axios.get('/members/versions');
+          if (versionsResponse.data && versionsResponse.data.length > 0) {
+            setVersionList(versionsResponse.data);
+            // 使用上傳回應中的版本號碼
+            const newVersion = response.data.version;
+            setCurrentVersion(newVersion);
+            
+            // 等待2秒後再獲取會員資料，確保後端處理完成
+            setTimeout(async () => {
+              try {
+                const membersResponse = await axios.get(`/members?version=${newVersion}`);
+                setMembers(membersResponse.data);
+              } catch (error) {
+                console.error('獲取會員資料時發生錯誤:', error);
+                setSnackbar({
+                  open: true,
+                  message: '獲取會員資料失敗',
+                  severity: 'error'
+                });
+              }
+            }, 2000);
+          }
+        } catch (error) {
+          console.error('獲取版本列表時發生錯誤:', error);
+          setSnackbar({
+            open: true,
+            message: '獲取版本列表失敗',
+            severity: 'error'
+          });
+        }
+      }
     } catch (error) {
-      console.error('Upload error:', error.response?.data || error);
+      console.error('上傳檔案時發生錯誤:', error);
       setSnackbar({
         open: true,
-        message: error.response?.data?.error || '上傳失敗',
-        severity: 'error',
+        message: '上傳失敗',
+        severity: 'error'
       });
     } finally {
       setLoading(false);
-      setUploadOpen(false);
-      event.target.value = null;  // 清除檔案選擇
+      // 清除檔案輸入，允許重新上傳相同檔案
+      event.target.value = '';
     }
   };
 
