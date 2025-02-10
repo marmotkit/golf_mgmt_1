@@ -189,7 +189,7 @@ function Scores() {
 
   const fetchTournaments = async () => {
     try {
-      const response = await axios.get('/api/tournaments');
+      const response = await axios.get('/tournaments');
       setTournaments(response.data);
     } catch (error) {
       console.error('Error fetching tournaments:', error);
@@ -198,7 +198,7 @@ function Scores() {
 
   const fetchScores = async (tournamentId) => {
     try {
-      const response = await axios.get(`/api/scores?tournament_id=${tournamentId}`);
+      const response = await axios.get(`/scores?tournament_id=${tournamentId}`);
       const scoresWithId = response.data.map((score, index) => ({
         ...score,
         id: index,
@@ -225,7 +225,7 @@ function Scores() {
     formData.append('tournament_id', selectedTournament.id);
 
     try {
-      const response = await axios.post('/api/scores/upload', formData, {
+      const response = await axios.post('/scores/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -246,7 +246,7 @@ function Scores() {
 
   const handleClearScores = async () => {
     try {
-      await axios.post('/api/scores/clear');
+      await axios.post('/scores/clear');
       alert('成績資料已清除');
       if (selectedTournament) {
         fetchScores(selectedTournament.id);
@@ -270,7 +270,7 @@ function Scores() {
 
   const calculateAnnualStats = async () => {
     try {
-      const response = await axios.post('/api/scores/annual-stats', {
+      const response = await axios.post('/scores/annual-stats', {
         tournament_ids: selectedTournaments
       });
       setAnnualStats(response.data);
@@ -331,7 +331,7 @@ function Scores() {
 
   const handleExportScores = async () => {
     try {
-      const response = await axios.get(`/api/scores/export/${selectedTournament.id}`, {
+      const response = await axios.get(`/scores/export/${selectedTournament.id}`, {
         responseType: 'blob'
       });
       
