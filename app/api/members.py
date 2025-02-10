@@ -68,10 +68,12 @@ def process_excel_data(df):
         if missing_columns:
             raise ValueError(f'缺少必要欄位：{", ".join(missing_columns)}')
 
-        # 清理數據：移除前後空格
+        # 清理數據：移除前後空格，將 '(null)' 轉換為空字串
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].astype(str).str.strip()
+                df[col] = df[col].replace('(null)', '')
+                df[col] = df[col].replace('null', '')
 
         # 驗證每一行數據
         errors = []
@@ -124,6 +126,13 @@ def process_excel_data(df):
                     error_msg += f'\n該行完整資料：{row_data}'
                     errors.append(error_msg)
                 else:
+                    # 清理可選欄位的數據
+                    if '英文姓名' in row:
+                        row['英文姓名'] = '' if str(row['英文姓名']).strip() in ['(null)', 'null', 'nan', ''] else str(row['英文姓名']).strip()
+                    if '系級' in row:
+                        row['系級'] = '' if str(row['系級']).strip() in ['(null)', 'null', 'nan', ''] else str(row['系級']).strip()
+                    if '中文姓名' in row:
+                        row['中文姓名'] = '' if str(row['中文姓名']).strip() in ['(null)', 'null', 'nan', ''] else str(row['中文姓名']).strip()
                     valid_rows.append(row)
                     
             except Exception as e:
