@@ -72,8 +72,7 @@ def process_excel_data(df):
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].astype(str).str.strip()
-                df[col] = df[col].replace('(null)', '')
-                df[col] = df[col].replace('null', '')
+                df[col] = df[col].replace(['(null)', 'null', 'nan', ''], '')
 
         # 驗證每一行數據
         errors = []
@@ -123,7 +122,6 @@ def process_excel_data(df):
                 # 如果有錯誤，加入到錯誤列表
                 if row_errors:
                     error_msg = f'第 {idx + 2} 行發生以下錯誤：\n' + '\n'.join(row_errors)
-                    error_msg += f'\n該行完整資料：{row_data}'
                     errors.append(error_msg)
                 else:
                     # 清理可選欄位的數據
