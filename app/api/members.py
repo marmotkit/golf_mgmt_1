@@ -63,10 +63,33 @@ def process_excel_data(df):
     """處理上傳的 Excel 資料"""
     try:
         # 檢查必要欄位是否存在
-        required_columns = ['會員編號', '會員類型', '帳號', '是否為管理員', '性別']
-        missing_columns = [col for col in required_columns if col not in df.columns]
+        required_columns = {
+            '會員編號': ['會員編號', '會員號碼'],
+            '會員類型': ['會員類型', '類型'],
+            '帳號': ['帳號', '帳戶', 'account'],
+            '是否為管理員': ['是否為管理員', '管理員'],
+            '性別': ['性別', 'gender']
+        }
+
+        # 檢查每個必要欄位
+        column_mapping = {}
+        missing_columns = []
+        
+        for required_col, possible_names in required_columns.items():
+            found = False
+            for name in possible_names:
+                if name in df.columns:
+                    column_mapping[required_col] = name
+                    found = True
+                    break
+            if not found:
+                missing_columns.append(required_col)
+
         if missing_columns:
-            raise ValueError(f'缺少必要欄位：{", ".join(missing_columns)}')
+            raise ValueError(f'缺少必要欄位：{", ".join(missing_columns)}\n可用的欄位名稱：{", ".join(df.columns)}')
+
+        # 重命名欄位以統一處理
+        df = df.rename(columns={v: k for k, v in column_mapping.items()})
 
         # 清理數據：移除前後空格，將 '(null)' 轉換為空字串
         for col in df.columns:
@@ -81,56 +104,43 @@ def process_excel_data(df):
         for idx, row in df.iterrows():
             try:
                 row_errors = []
-                row_data = row.to_dict()  # 保存原始資料以便除錯
+                row_data = row.to_dict()
                 
                 # 檢查必填欄位是否為空
                 empty_fields = []
-                for col in required_columns:
+                for col in required_columns.keys():
                     if pd.isna(row[col]) or str(row[col]).strip() == '':
                         empty_fields.append(col)
                 
                 if empty_fields:
-                    row_errors.append(f'必填欄位為空：{", ".join(empty_fields)}')
-                    logger.error(f'第 {idx + 2} 行資料有空欄位：{empty_fields}')
-                    logger.error(f'該行資料內容：{row_data}')
+                    row_errors.append(f'第 {idx + 2} 行：必填欄位為空：{", ".join(empty_fields)}')
 
                 # 驗證會員編號格式
                 member_number = str(row['會員編號']).strip()
                 if len(member_number) == 0:
-                    row_errors.append('會員編號不能為空')
+                    row_errors.append(f'第 {idx + 2} 行：會員編號不能為空')
                 elif len(member_number) > 10:
-                    row_errors.append(f'會員編號長度不能超過10個字符：{member_number}')
+                    row_errors.append(f'第 {idx + 2} 行：會員編號長度不能超過10個字符：{member_number}')
 
                 # 驗證會員類型
                 member_type = str(row['會員類型']).strip()
                 if member_type not in ['會員', '來賓']:
-                    row_errors.append(f'會員類型錯誤：{member_type}（必須是「會員」或「來賓」）')
-                    logger.error(f'第 {idx + 2} 行會員類型錯誤：{member_type}')
+                    row_errors.append(f'第 {idx + 2} 行：會員類型必須是「會員」或「來賓」，目前值為：{member_type}')
 
                 # 驗證管理員欄位
                 is_admin = str(row['是否為管理員']).strip()
                 if is_admin not in ['是', '否']:
-                    row_errors.append(f'管理員欄位錯誤：{is_admin}（必須是「是」或「否」）')
-                    logger.error(f'第 {idx + 2} 行管理員欄位錯誤：{is_admin}')
+                    row_errors.append(f'第 {idx + 2} 行：是否為管理員必須是「是」或「否」，目前值為：{is_admin}')
 
                 # 驗證性別
                 gender = str(row['性別']).strip()
                 if gender not in ['M', 'F']:
                     row_errors.append(f'第 {idx + 2} 行：性別必須是「M」或「F」，目前值為：{gender}')
-                    logger.error(f'第 {idx + 2} 行性別欄位錯誤：{gender}')
 
                 # 如果有錯誤，加入到錯誤列表
                 if row_errors:
-                    error_msg = f'第 {idx + 2} 行發生以下錯誤：\n' + '\n'.join(row_errors)
-                    errors.append(error_msg)
+                    errors.extend(row_errors)
                 else:
-                    # 清理可選欄位的數據
-                    if '英文姓名' in row:
-                        row['英文姓名'] = '' if str(row['英文姓名']).strip() in ['(null)', 'null', 'nan', ''] else str(row['英文姓名']).strip()
-                    if '系級' in row:
-                        row['系級'] = '' if str(row['系級']).strip() in ['(null)', 'null', 'nan', ''] else str(row['系級']).strip()
-                    if '中文姓名' in row:
-                        row['中文姓名'] = '' if str(row['中文姓名']).strip() in ['(null)', 'null', 'nan', ''] else str(row['中文姓名']).strip()
                     valid_rows.append(row)
                     
             except Exception as e:
@@ -139,9 +149,9 @@ def process_excel_data(df):
                 errors.append(f'第 {idx + 2} 行處理失敗：{str(e)}')
 
         if errors:
-            error_summary = '\n\n'.join(errors)
-            logger.error(f'資料驗證發現 {len(errors)} 個錯誤：\n{error_summary}')
-            raise ValueError(f'資料驗證發現 {len(errors)} 個錯誤：\n{error_summary}')
+            error_summary = '\n'.join(errors)
+            logger.error(f'資料驗證發現錯誤：\n{error_summary}')
+            raise ValueError(error_summary)
 
         # 創建新的 DataFrame，只包含有效的資料行
         valid_df = pd.DataFrame(valid_rows)
