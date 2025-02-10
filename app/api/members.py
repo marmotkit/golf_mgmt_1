@@ -1039,3 +1039,57 @@ def export_members():
         logger.error(f'Error exporting members: {str(e)}')
         logger.error(traceback.format_exc())
         return jsonify({'error': '匯出會員資料失敗'}), 500
+
+@bp.route('/template', methods=['GET'])
+def download_template():
+    """下載會員資料上傳用的 Excel 範本"""
+    try:
+        # 創建範本數據
+        template_data = {
+            '會員編號': ['M001', 'F001'],  # 範例：M開頭為男性會員，F開頭為女性會員
+            '帳號': ['john_doe', 'jane_doe'],
+            '中文姓名': ['王大明', '李小華'],
+            '英文姓名': ['John Doe', 'Jane Doe'],  # 選填
+            '系級': ['資工系 2020', '企管系 2021'],  # 選填
+            '會員類型': ['會員', '來賓'],  # 必填：會員/來賓
+            '是否為管理員': ['否', '否'],  # 必填：是/否
+            '性別': ['男', '女'],  # 必填：男/女
+            '差點': [0, 0],  # 選填
+        }
+        
+        # 創建 DataFrame
+        df = pd.DataFrame(template_data)
+        
+        # 創建一個 BytesIO 對象來保存 Excel 文件
+        excel_file = io.BytesIO()
+        
+        # 將 DataFrame 寫入 Excel
+        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='會員資料範本')
+            
+            # 獲取工作表
+            worksheet = writer.sheets['會員資料範本']
+            
+            # 調整欄寬
+            for idx, col in enumerate(df.columns):
+                max_length = max(
+                    df[col].astype(str).apply(len).max(),
+                    len(col)
+                )
+                worksheet.column_dimensions[chr(65 + idx)].width = max_length + 4
+        
+        # 將指針移到文件開頭
+        excel_file.seek(0)
+        
+        # 返回 Excel 文件
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name='member_template.xlsx'
+        )
+            
+    except Exception as e:
+        logger.error(f'Error creating template: {str(e)}')
+        logger.error(traceback.format_exc())
+        return jsonify({'error': '範本檔案生成失敗'}), 500

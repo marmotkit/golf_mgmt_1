@@ -733,18 +733,47 @@ const Members = () => {
       <Dialog open={uploadOpen} onClose={handleUploadClose}>
         <DialogTitle>上傳會員資料</DialogTitle>
         <DialogContent>
-          <input
-            type="file"
-            accept=".xlsx"
-            onChange={handleFileUpload}
-            style={{ display: 'none' }}
-            id="excel-upload"
-          />
-          <label htmlFor="excel-upload">
-            <Button variant="contained" component="span">
-              選擇 EXCEL 檔案
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, my: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              請先下載範本，依照範本格式填寫會員資料後再上傳。
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<DownloadIcon />}
+              onClick={() => {
+                window.open('/api/members/template', '_blank');
+              }}
+            >
+              下載範本
             </Button>
-          </label>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+              必填欄位：
+              <ul>
+                <li>會員編號（M開頭為男性會員，F開頭為女性會員）</li>
+                <li>帳號</li>
+                <li>中文姓名</li>
+                <li>會員類型（會員/來賓）</li>
+                <li>是否為管理員（是/否）</li>
+                <li>性別（男/女）</li>
+              </ul>
+            </Typography>
+            <input
+              type="file"
+              accept=".xlsx"
+              onChange={handleFileUpload}
+              style={{ display: 'none' }}
+              id="excel-upload"
+            />
+            <label htmlFor="excel-upload">
+              <Button
+                variant="contained"
+                component="span"
+                startIcon={<UploadIcon />}
+              >
+                選擇 EXCEL 檔案
+              </Button>
+            </label>
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleUploadClose}>關閉</Button>
