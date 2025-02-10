@@ -14,7 +14,7 @@ import {
   EmojiEvents as TrophyIcon
 } from '@mui/icons-material';
 import CheckIcon from '@mui/icons-material/Check';
-import axios from '../utils/axios';
+import * as dashboardService from '../services/dashboardService';
 
 const StatsCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -88,17 +88,17 @@ const Dashboard = () => {
           versionResponse,
           versionDescResponse
         ] = await Promise.all([
-          axios.get('/api/dashboard/stats'),
-          axios.get('/api/dashboard/announcements'),
-          axios.get('/api/dashboard/version'),
-          axios.get('/api/dashboard/version/description'),
+          dashboardService.getStats(),
+          dashboardService.getAnnouncements(),
+          dashboardService.getVersion(),
+          dashboardService.getVersionDescription(),
         ]);
 
-        setStats(statsResponse.data);
-        setAnnouncements(announcementsResponse.data);
-        setVersion(versionResponse.data.version);
-        setVersionDescription(versionDescResponse.data.description);
-        setEditedDescription(versionDescResponse.data.description);
+        setStats(statsResponse);
+        setAnnouncements(announcementsResponse);
+        setVersion(versionResponse.version);
+        setVersionDescription(versionDescResponse.description);
+        setEditedDescription(versionDescResponse.description);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       }
@@ -108,7 +108,7 @@ const Dashboard = () => {
   }, []);
 
   const handleVersionClick = async (event) => {
-    event.preventDefault(); // 防止預設行為
+    event.preventDefault();
     const isLeftClick = event.button === 0;
     const currentVersion = version.replace('V', '');
     const [major, minor] = currentVersion.split('.').map(Number);
@@ -117,14 +117,12 @@ const Dashboard = () => {
     let newMinor = minor;
 
     if (isLeftClick) {
-      // 左鍵點擊，版本號增加
       newMinor += 1;
       if (newMinor > 9) {
         newMajor += 1;
         newMinor = 0;
       }
     } else if (event.button === 2) {
-      // 右鍵點擊，版本號減少
       newMinor -= 1;
       if (newMinor < 0) {
         if (newMajor > 1) {
@@ -138,7 +136,7 @@ const Dashboard = () => {
 
     const newVersion = `V${newMajor}.${newMinor}`;
     try {
-      await axios.post('/api/dashboard/version', { version: newVersion });
+      await dashboardService.updateVersion({ version: newVersion });
       setVersion(newVersion);
     } catch (error) {
       console.error('Error updating version:', error);
@@ -174,12 +172,12 @@ const Dashboard = () => {
   const handleChampionSubmit = async () => {
     try {
       if (editingChampion) {
-        await axios.put(`/api/dashboard/champions/${editingChampion.id}`, championForm);
+        await dashboardService.updateChampion(editingChampion.id, championForm);
       } else {
-        await axios.post('/api/dashboard/champions', championForm);
+        await dashboardService.createChampion(championForm);
       }
-      const response = await axios.get('/api/dashboard/stats');
-      setStats(response.data);
+      const statsResponse = await dashboardService.getStats();
+      setStats(statsResponse);
       handleChampionDialogClose();
     } catch (error) {
       console.error('Error saving champion:', error);
@@ -189,9 +187,9 @@ const Dashboard = () => {
   const handleChampionDelete = async (id) => {
     if (window.confirm('確定要刪除這筆記錄嗎？')) {
       try {
-        await axios.delete(`/api/dashboard/champions/${id}`);
-        const response = await axios.get('/api/dashboard/stats');
-        setStats(response.data);
+        await dashboardService.deleteChampion(id);
+        const statsResponse = await dashboardService.getStats();
+        setStats(statsResponse);
       } catch (error) {
         console.error('Error deleting champion:', error);
       }
@@ -221,12 +219,12 @@ const Dashboard = () => {
   const handleAnnouncementSubmit = async () => {
     try {
       if (editingAnnouncement) {
-        await axios.put(`/api/dashboard/announcements/${editingAnnouncement.id}`, announcementForm);
+        await dashboardService.updateAnnouncement(editingAnnouncement.id, announcementForm);
       } else {
-        await axios.post('/api/dashboard/announcements', announcementForm);
+        await dashboardService.createAnnouncement(announcementForm);
       }
-      const response = await axios.get('/api/dashboard/announcements');
-      setAnnouncements(response.data);
+      const announcementsResponse = await dashboardService.getAnnouncements();
+      setAnnouncements(announcementsResponse);
       handleAnnouncementDialogClose();
     } catch (error) {
       console.error('Error saving announcement:', error);
@@ -236,9 +234,9 @@ const Dashboard = () => {
   const handleAnnouncementDelete = async (id) => {
     if (window.confirm('確定要刪除這則公告嗎？')) {
       try {
-        await axios.delete(`/api/dashboard/announcements/${id}`);
-        const response = await axios.get('/api/dashboard/announcements');
-        setAnnouncements(response.data);
+        await dashboardService.deleteAnnouncement(id);
+        const announcementsResponse = await dashboardService.getAnnouncements();
+        setAnnouncements(announcementsResponse);
       } catch (error) {
         console.error('Error deleting announcement:', error);
       }
@@ -248,7 +246,7 @@ const Dashboard = () => {
   const handleDescriptionEdit = async () => {
     if (isEditingDescription) {
       try {
-        await axios.post('/api/dashboard/version/description', { description: editedDescription });
+        await dashboardService.updateVersionDescription({ description: editedDescription });
         setVersionDescription(editedDescription);
       } catch (error) {
         console.error('Error updating version description:', error);
