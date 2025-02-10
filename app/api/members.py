@@ -353,14 +353,19 @@ def upload_members():
                     'handicap': float(row['差點']) if pd.notna(row.get('差點')) and str(row['差點']).strip() != '' else None
                 }
 
-                member = Member.query.filter_by(member_number=member_data['member_number']).first()
-                if not member:
+                # 檢查是否已存在相同帳號的會員
+                existing_member = Member.query.filter_by(account=member_data['account']).first()
+                if existing_member:
+                    # 更新現有會員資料
+                    for key, value in member_data.items():
+                        setattr(existing_member, key, value)
+                    member = existing_member
+                else:
+                    # 創建新會員
                     member = Member(**member_data)
                     db.session.add(member)
-                    db.session.flush()
-                else:
-                    for key, value in member_data.items():
-                        setattr(member, key, value)
+                
+                db.session.flush()
 
                 version = MemberVersion(
                     member_id=member.id,
