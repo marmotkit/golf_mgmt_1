@@ -1,13 +1,17 @@
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, send_file
 from app.models import Score, db, Tournament, Member
 import pandas as pd
 import os
 from werkzeug.utils import secure_filename
 import traceback
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
+from openpyxl.utils import get_column_letter
 import uuid
 import csv
 from sqlalchemy import func
+from io import BytesIO
+from datetime import datetime
 
 bp = Blueprint('scores', __name__)
 
@@ -491,5 +495,91 @@ def get_annual_stats():
         current_app.logger.error(traceback.format_exc())
         return jsonify({
             'error': '計算年度總成績失敗',
+            'details': str(e)
+        }), 500
+
+@bp.route('/export/<int:tournament_id>', methods=['GET'])
+def export_scores(tournament_id):
+    try:
+        current_app.logger.info(f"開始匯出賽事ID {tournament_id} 的成績")
+        
+        # 獲取賽事資訊
+        tournament = Tournament.query.get_or_404(tournament_id)
+        
+        # 獲取該賽事的所有成績
+        scores = Score.query.filter_by(tournament_id=tournament_id).all()
+        
+        if not scores:
+            return jsonify({'error': '該賽事尚無成績記錄'}), 404
+            
+        # 創建一個新的工作簿
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "成績表"
+        
+        # 設定標題列
+        headers = ['會員編號', 'HOLE', '姓名', '淨桿名次', '總桿數', 
+                  '前次差點', '淨桿桿數', '差點增減', '新差點', '積分']
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
+            cell.alignment = Alignment(horizontal='center')
+            cell.border = Border(
+                left=Side(style='thin'),
+                right=Side(style='thin'),
+                top=Side(style='thin'),
+                bottom=Side(style='thin')
+            )
+        
+        # 添加數據
+        for row, score in enumerate(scores, 2):
+            data = [
+                score.member_number,
+                score.full_name,
+                score.chinese_name,
+                score.rank,
+                score.gross_score,
+                score.previous_handicap,
+                score.net_score,
+                score.handicap_change,
+                score.new_handicap,
+                score.points
+            ]
+            
+            for col, value in enumerate(data, 1):
+                cell = ws.cell(row=row, column=col, value=value)
+                cell.alignment = Alignment(horizontal='center')
+                cell.border = Border(
+                    left=Side(style='thin'),
+                    right=Side(style='thin'),
+                    top=Side(style='thin'),
+                    bottom=Side(style='thin')
+                )
+        
+        # 調整欄寬
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[get_column_letter(col)].width = 15
+            
+        # 將工作簿保存到 BytesIO 對象
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
+        
+        # 生成檔案名稱
+        filename = f"{tournament.name}_成績表_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        
+        return send_file(
+            excel_file,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"匯出成績時發生錯誤: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': '匯出成績失敗',
             'details': str(e)
         }), 500

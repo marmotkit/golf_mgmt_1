@@ -28,6 +28,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import axios from '../utils/axios';
+import { useSnackbar } from 'notistack';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -124,6 +125,7 @@ function Scores() {
   const [annualStats, setAnnualStats] = useState([]);
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('total_points');
+  const { enqueueSnackbar } = useSnackbar();
 
   const columns = [
     { field: 'member_number', headerName: '會員編號', width: 120 },
@@ -326,6 +328,28 @@ function Scores() {
     </TableCell>
   );
 
+  const handleExportScores = async () => {
+    try {
+      const response = await axios.get(`/scores/export/${selectedTournament.id}`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${selectedTournament.name}_成績表.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      enqueueSnackbar('成績匯出成功', { variant: 'success' });
+    } catch (error) {
+      console.error('匯出成績時發生錯誤:', error);
+      enqueueSnackbar('匯出成績失敗', { variant: 'error' });
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
@@ -373,6 +397,14 @@ function Scores() {
                     onClick={() => setOpenUploadDialog(true)}
                   >
                     匯入成績
+                  </Button>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    onClick={handleExportScores}
+                    disabled={scores.length === 0}
+                  >
+                    匯出成績
                   </Button>
                 </Box>
               </Box>
