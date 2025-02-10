@@ -656,37 +656,45 @@ const Members = () => {
           versionList={versionList}
           onVersionChange={handleVersionChange}
         />
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            variant="contained"
-            startIcon={<UploadIcon />}
-            onClick={handleUploadOpen}
-          >
-            上傳 EXCEL
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<DownloadIcon />}
-            onClick={handleDownloadExcel}
-          >
-            下載 EXCEL
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<DownloadIcon />}
-            onClick={() => {
-              window.open('/api/members/template', '_blank');
-            }}
-          >
-            下載範本
-          </Button>
-          <Button
-            variant="outlined"
-            startIcon={<CompareArrowsIcon />}
-            onClick={() => setCompareDialogOpen(true)}
-          >
-            版本比較
-          </Button>
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<DownloadIcon />}
+              onClick={() => {
+                window.open('/api/members/template', '_blank');
+              }}
+            >
+              下載範本
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<UploadIcon />}
+              onClick={handleUploadOpen}
+            >
+              上傳 EXCEL
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<DownloadIcon />}
+              onClick={handleDownloadExcel}
+            >
+              下載 EXCEL
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<CompareArrowsIcon />}
+              onClick={() => setCompareDialogOpen(true)}
+            >
+              版本比較
+            </Button>
+          </Box>
         </Box>
       </Box>
 
