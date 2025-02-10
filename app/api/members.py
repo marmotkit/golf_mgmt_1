@@ -10,6 +10,7 @@ from datetime import datetime
 from sqlalchemy import func
 from sqlalchemy import Boolean
 import io
+from io import BytesIO
 
 bp = Blueprint('members', __name__)
 
@@ -59,208 +60,60 @@ def generate_version_number():
         raise
 
 def process_excel_data(df):
-    """
-    處理 Excel 資料並創建新版本
-    每次上傳都會創建新版本，不會覆蓋原有資料
-    """
-    success_count = 0
-    error_messages = []
-    
+    """處理上傳的 Excel 資料"""
     try:
-        # 記錄 DataFrame 信息
-        logger.info(f'DataFrame info: {df.info()}')
-        logger.info(f'DataFrame columns: {df.columns.tolist()}')
-        logger.info(f'DataFrame shape: {df.shape}')
-        logger.info(f'DataFrame first row: {df.iloc[0].to_dict() if len(df) > 0 else "No data"}')
-        
-        # 第一步：驗證所有資料
-        required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員', '性別']
+        # 檢查必要欄位是否存在
+        required_columns = ['會員編號', '會員類型', '帳號', '是否為管理員', '性別']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            logger.error(f'Missing columns: {missing_columns}')
-            return 0, [f'缺少必要欄位: {", ".join(missing_columns)}']
+            raise ValueError(f'缺少必要欄位：{", ".join(missing_columns)}')
 
-        # 檢查是否有重複的會員編號
-        member_numbers = df['會員編號'].fillna('').astype(str).str.strip().tolist()
-        duplicates = [num for num in member_numbers if num and member_numbers.count(num) > 1]
-        if duplicates:
-            logger.error(f'Duplicate member numbers found: {duplicates}')
-            return 0, [f'Excel 檔案中包含重複的會員編號: {", ".join(set(duplicates))}']
+        # 清理數據：移除前後空格
+        for col in df.columns:
+            if df[col].dtype == object:
+                df[col] = df[col].astype(str).str.strip()
 
-        # 檢查必要欄位是否為空
-        empty_required = []
+        # 驗證每一行數據
+        errors = []
         for idx, row in df.iterrows():
-            member_number = str(row['會員編號']).strip() if pd.notna(row['會員編號']) else ''
-            chinese_name = str(row['中文姓名']).strip() if pd.notna(row['中文姓名']) else ''
+            row_errors = []
             
-            if not member_number or not chinese_name:
-                empty_fields = []
-                if not member_number:
-                    empty_fields.append('會員編號')
-                if not chinese_name:
-                    empty_fields.append('中文姓名')
-                empty_required.append(f'第 {idx + 2} 行: {", ".join(empty_fields)} 為空')
-        
-        if empty_required:
-            logger.error(f'Empty required fields: {empty_required}')
-            return 0, empty_required
+            # 檢查必填欄位是否為空
+            for col in required_columns:
+                if pd.isna(row[col]) or str(row[col]).strip() == '':
+                    row_errors.append(f'{col}不能為空')
 
-        # 第二步：開始資料庫事務
-        version_number = generate_version_number()
-        logger.info(f'Starting transaction with version: {version_number}')
-        
-        # 第三步：處理每一行資料
-        new_members = []
-        version_records = []
-        row_errors = []
-        
-        for index, row in df.iterrows():
-            try:
-                logger.info(f'Processing row {index + 1}: {row.to_dict()}')
-                
-                # 檢查並清理資料
-                try:
-                    # 帳號：移除空白，轉換為小寫
-                    account = str(row['帳號']).strip().lower() if pd.notna(row['帳號']) else None
-                    logger.info(f'Account processed: {row["帳號"]} -> {account}')
-                    
-                    # 中文姓名：移除空白
-                    chinese_name = str(row['中文姓名']).strip() if pd.notna(row['中文姓名']) else None
-                    logger.info(f'Chinese name processed: {row["中文姓名"]} -> {chinese_name}')
-                    
-                    # 英文姓名：移除空白，保持原始大小寫
-                    english_name = str(row['英文姓名']).strip() if pd.notna(row['英文姓名']) else None
-                    logger.info(f'English name processed: {row["英文姓名"]} -> {english_name}')
-                    
-                    # 系級：移除空白，統一格式
-                    department_class = str(row['系級']).strip() if pd.notna(row['系級']) else None
-                    logger.info(f'Department class processed: {row["系級"]} -> {department_class}')
-                    
-                    # 會員編號：移除空白，轉換為大寫
-                    member_number = str(row['會員編號']).strip().upper() if pd.notna(row['會員編號']) else None
-                    logger.info(f'Member number processed: {row["會員編號"]} -> {member_number}')
-                    
-                    # 會員類型：檢查是否為來賓
-                    is_guest = str(row['會員類型']).strip() == '來賓' if pd.notna(row['會員類型']) else False
-                    logger.info(f'Is guest processed: {row["會員類型"]} -> {is_guest}')
-                    
-                    # 管理員：檢查多種可能的值
-                    admin_value = str(row['是否為管理員']).strip().lower() if pd.notna(row['是否為管理員']) else ''
-                    is_admin = admin_value in ['是', '1', 'true', 'yes', 'y']
-                    logger.info(f'Is admin processed: {row["是否為管理員"]} -> {is_admin}')
-                    
-                    # 性別：轉換為大寫的 'M' 或 'F'
-                    gender_value = str(row['性別']).strip().upper() if pd.notna(row['性別']) else None
-                    gender = gender_value if gender_value in ['M', 'F'] else None
-                    logger.info(f'Gender processed: {row["性別"]} -> {gender}')
-                    
-                    # 特別處理差點欄位
-                    try:
-                        handicap_str = str(row['差點']).strip() if pd.notna(row['差點']) else None
-                        handicap = float(handicap_str) if handicap_str is not None else None
-                        logger.info(f'Handicap processed: {handicap_str} -> {handicap}')
-                    except (ValueError, TypeError) as e:
-                        handicap = None
-                        logger.warning(f'Invalid handicap value in row {index + 1}: {row["差點"]}, Error: {str(e)}')
-                    
-                except Exception as e:
-                    logger.error(f'Error processing row data: {str(e)}')
-                    logger.error(traceback.format_exc())
-                    raise ValueError(f'資料格式錯誤: {str(e)}')
-                
-                # 記錄處理後的資料
-                member_data = {
-                    'account': account,
-                    'chinese_name': chinese_name,
-                    'english_name': english_name,
-                    'department_class': department_class,
-                    'member_number': member_number,
-                    'is_guest': is_guest,
-                    'is_admin': is_admin,
-                    'gender': gender,
-                    'handicap': handicap
-                }
-                logger.info(f'Processed data: {member_data}')
+            # 驗證會員編號格式
+            member_number = str(row['會員編號']).strip()
+            if not (member_number.startswith('M') or member_number.startswith('F')) or not member_number[1:].isdigit():
+                row_errors.append('會員編號格式錯誤（必須以M或F開頭，後接數字）')
 
-                # 檢查必要欄位是否有值
-                if not member_number or not chinese_name:  
-                    error_msg = f"第 {index + 2} 行資料驗證失敗: 會員編號({member_number})和中文姓名({chinese_name})為必填欄位"
-                    logger.error(error_msg)
-                    row_errors.append(error_msg)
-                    continue
+            # 驗證會員類型
+            member_type = str(row['會員類型']).strip()
+            if member_type not in ['會員', '來賓']:
+                row_errors.append('會員類型必須是「會員」或「來賓」')
 
-                # 查找或創建會員記錄
-                member = Member.query.filter_by(member_number=member_number).first()
-                if not member:
-                    logger.info(f'Creating new member: {member_number}')
-                    member = Member(**member_data)
-                    new_members.append(member)
-                    db.session.add(member)
-                    db.session.flush()  # 獲取 member.id
-                else:
-                    logger.info(f'Updating existing member: {member_number}')
-                    # 更新現有會員資料
-                    for key, value in member_data.items():
-                        if value is not None:  # 只更新非空值
-                            current_value = getattr(member, key)
-                            if current_value != value:
-                                logger.info(f'Updating {key}: {current_value} -> {value}')
-                                setattr(member, key, value)
+            # 驗證管理員欄位
+            is_admin = str(row['是否為管理員']).strip()
+            if is_admin not in ['是', '否']:
+                row_errors.append('是否為管理員必須是「是」或「否」')
 
-                # 創建版本記錄
-                version = MemberVersion(
-                    member_id=member.id,
-                    version=version_number,
-                    data=member_data,
-                    created_at=datetime.now()
-                )
-                version_records.append(version)
-                success_count += 1
-                logger.info(f'Successfully processed member: {member_number}')
-                
-            except Exception as e:
-                error_msg = f"第 {index + 2} 行資料處理失敗: {str(e)}"
-                logger.error(error_msg)
-                logger.error(traceback.format_exc())
-                row_errors.append(error_msg)
-                continue  # 繼續處理下一行
+            # 驗證性別
+            gender = str(row['性別']).strip()
+            if gender not in ['男', '女']:
+                row_errors.append('性別必須是「男」或「女」')
 
-        # 如果有成功處理的資料，就提交
-        if success_count > 0:
-            logger.info(f'Committing {success_count} members to version {version_number}')
-            try:
-                # 批次添加版本記錄
-                for version in version_records:
-                    db.session.add(version)
-                    logger.info(f'Adding version record for member {version.member_id}')
+            # 如果有錯誤，加入到錯誤列表
+            if row_errors:
+                errors.append(f'第 {idx + 2} 行：{", ".join(row_errors)}')
 
-                # 提交所有更改
-                db.session.commit()
-                logger.info(f'Successfully committed version {version_number} with {success_count} members')
-            except Exception as e:
-                db.session.rollback()
-                error_msg = f"資料庫提交失敗: {str(e)}"
-                logger.error(error_msg)
-                logger.error(traceback.format_exc())
-                return 0, [error_msg]
-            
-            # 將行錯誤添加到錯誤訊息中
-            error_messages.extend(row_errors)
-            
-        else:
-            db.session.rollback()
-            logger.error('No successful records to commit')
-            error_messages.extend(row_errors)
-            return 0, error_messages
+        if errors:
+            raise ValueError('\n'.join(errors))
+
+        return df
 
     except Exception as e:
-        db.session.rollback()
-        error_msg = f"資料庫錯誤: {str(e)}"
-        logger.error(error_msg)
-        logger.error(traceback.format_exc())
-        return 0, [error_msg]
-        
-    return success_count, error_messages
+        raise ValueError(f'處理 Excel 數據時發生錯誤：{str(e)}')
 
 def _parse_bool(value):
     if isinstance(value, bool):
@@ -415,22 +268,21 @@ def upload_members():
         # Process data
         try:
             logger.info('Processing Excel data...')
-            success_count, error_messages = process_excel_data(df)
-            logger.info(f'Data processed. Success: {success_count}, Errors: {error_messages}')
+            df = process_excel_data(df)
+            logger.info(f'Data processed. Success: {len(df)} members')
             
-            if success_count == 0 and error_messages:
-                logger.error(f'No records processed successfully. Errors: {error_messages}')
+            if len(df) == 0:
+                logger.error('No records processed successfully')
                 return jsonify({
                     'error': '資料處理失敗',
-                    'error_messages': error_messages,
+                    'error_messages': ['資料處理失敗'],
                     'success_count': 0
                 }), 400
             
             return jsonify({
                 'success': True,
-                'message': f'成功處理 {success_count} 筆資料',
-                'error_messages': error_messages,
-                'success_count': success_count
+                'message': f'成功處理 {len(df)} 筆資料',
+                'success_count': len(df)
             })
             
         except Exception as e:
@@ -1047,27 +899,22 @@ def download_template():
         # 創建範本數據
         template_data = {
             '會員編號': ['M001', 'F001'],  # 範例：M開頭為男性會員，F開頭為女性會員
-            '帳號': ['john_doe', 'jane_doe'],
-            '中文姓名': ['王大明', '李小華'],
-            '英文姓名': ['John Doe', 'Jane Doe'],  # 選填
-            '系級': ['資工系 2020', '企管系 2021'],  # 選填
-            '會員類型': ['會員', '來賓'],  # 必填：會員/來賓
-            '是否為管理員': ['否', '否'],  # 必填：是/否
-            '性別': ['男', '女'],  # 必填：男/女
-            '差點': [0, 0],  # 選填
+            '帳號': ['user1', 'user2'],
+            '中文姓名': ['王小明', '李小華'],
+            '英文姓名': ['Wang, Xiao-Ming', 'Lee, Xiao-Hua'],
+            '系級': ['資工系', '企管系'],
+            '會員類型': ['會員', '來賓'],
+            '是否為管理員': ['是', '否'],
+            '性別': ['男', '女'],
+            '差點': [0, 0],
         }
         
-        # 創建 DataFrame
         df = pd.DataFrame(template_data)
         
-        # 創建一個 BytesIO 對象來保存 Excel 文件
-        excel_file = io.BytesIO()
-        
-        # 將 DataFrame 寫入 Excel
-        with pd.ExcelWriter(excel_file, engine='openpyxl') as writer:
+        # 創建 Excel 檔案
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df.to_excel(writer, index=False, sheet_name='會員資料範本')
-            
-            # 獲取工作表
             worksheet = writer.sheets['會員資料範本']
             
             # 調整欄寬
@@ -1078,18 +925,9 @@ def download_template():
                 )
                 worksheet.column_dimensions[chr(65 + idx)].width = max_length + 4
         
-        # 將指針移到文件開頭
-        excel_file.seek(0)
+        output.seek(0)
+        return output.getvalue()
         
-        # 返回 Excel 文件
-        return send_file(
-            excel_file,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            as_attachment=True,
-            download_name='member_template.xlsx'
-        )
-            
     except Exception as e:
-        logger.error(f'Error creating template: {str(e)}')
-        logger.error(traceback.format_exc())
-        return jsonify({'error': '範本檔案生成失敗'}), 500
+        current_app.logger.error(f'生成範本時發生錯誤：{str(e)}')
+        raise
