@@ -30,6 +30,8 @@ import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import axios from '../utils/axios';
 import { useSnackbar } from 'notistack';
 import DownloadIcon from '@mui/icons-material/Download';
+import * as tournamentService from '../services/tournamentService';
+import * as scoreService from '../services/scoreService';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -189,8 +191,8 @@ function Scores() {
 
   const fetchTournaments = async () => {
     try {
-      const response = await axios.get('/api/tournaments');
-      setTournaments(response.data);
+      const response = await tournamentService.getTournaments();
+      setTournaments(response);
     } catch (error) {
       console.error('Error fetching tournaments:', error);
     }
@@ -198,8 +200,8 @@ function Scores() {
 
   const fetchScores = async (tournamentId) => {
     try {
-      const response = await axios.get(`/api/scores?tournament_id=${tournamentId}`);
-      const scoresWithId = response.data.map((score, index) => ({
+      const response = await scoreService.getScores(tournamentId);
+      const scoresWithId = response.map((score, index) => ({
         ...score,
         id: index,
       }));
@@ -225,11 +227,7 @@ function Scores() {
     formData.append('tournament_id', selectedTournament.id);
 
     try {
-      const response = await axios.post('/api/scores/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      await scoreService.uploadScores(selectedTournament.id, formData);
       setOpenUploadDialog(false);
       setSelectedFile(null);
       fetchScores(selectedTournament.id);
@@ -246,7 +244,7 @@ function Scores() {
 
   const handleClearScores = async () => {
     try {
-      await axios.post('/api/scores/clear');
+      await scoreService.clearScores();
       alert('成績資料已清除');
       if (selectedTournament) {
         fetchScores(selectedTournament.id);
@@ -270,10 +268,8 @@ function Scores() {
 
   const calculateAnnualStats = async () => {
     try {
-      const response = await axios.post('/api/scores/annual-stats', {
-        tournament_ids: selectedTournaments
-      });
-      setAnnualStats(response.data);
+      const response = await scoreService.calculateAnnualStats(selectedTournaments);
+      setAnnualStats(response);
     } catch (error) {
       console.error('Error calculating annual stats:', error);
       if (error.response?.data?.error) {
@@ -331,11 +327,8 @@ function Scores() {
 
   const handleExportScores = async () => {
     try {
-      const response = await axios.get(`/api/scores/export/${selectedTournament.id}`, {
-        responseType: 'blob'
-      });
-      
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const response = await scoreService.exportScores(selectedTournament.id);
+      const url = window.URL.createObjectURL(new Blob([response]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `${selectedTournament.name}_成績表.xlsx`);
