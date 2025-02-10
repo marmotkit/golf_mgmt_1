@@ -188,44 +188,51 @@ const Members = () => {
           severity: 'success',
         });
         
-        // 重新獲取版本列表並設定最新版本
-        try {
-          const versionsResponse = await axios.get('/members/versions');
-          if (versionsResponse.data && versionsResponse.data.length > 0) {
-            setVersionList(versionsResponse.data);
-            // 使用上傳回應中的版本號碼
-            const newVersion = response.data.version;
-            setCurrentVersion(newVersion);
-            
-            // 等待2秒後再獲取會員資料，確保後端處理完成
-            setTimeout(async () => {
-              try {
-                const membersResponse = await axios.get(`/members?version=${newVersion}`);
-                setMembers(membersResponse.data);
-              } catch (error) {
-                console.error('獲取會員資料時發生錯誤:', error);
-                setSnackbar({
-                  open: true,
-                  message: '獲取會員資料失敗',
-                  severity: 'error'
-                });
-              }
-            }, 2000);
+        // 等待後端處理完成
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // 重新獲取版本列表
+        const versionsResponse = await axios.get('/members/versions');
+        if (versionsResponse.data && versionsResponse.data.length > 0) {
+          const versions = versionsResponse.data;
+          setVersionList(versions);
+          
+          // 設定最新版本
+          const latestVersion = versions[0];
+          console.log('設定最新版本:', latestVersion);
+          setCurrentVersion(latestVersion);
+          
+          // 使用最新版本獲取會員資料
+          try {
+            const membersResponse = await axios.get(`/members?version=${latestVersion.version}`);
+            console.log('獲取會員資料回應:', membersResponse);
+            if (membersResponse.data) {
+              const sortedMembers = membersResponse.data.sort((a, b) => {
+                if (a.is_guest !== b.is_guest) {
+                  return a.is_guest ? 1 : -1;
+                }
+                return (a.member_number || '').localeCompare(b.member_number || '');
+              });
+              setMembers(sortedMembers);
+            }
+          } catch (error) {
+            console.error('獲取會員資料失敗:', error);
+            setSnackbar({
+              open: true,
+              message: '獲取會員資料失敗',
+              severity: 'error'
+            });
           }
-        } catch (error) {
-          console.error('獲取版本列表時發生錯誤:', error);
-          setSnackbar({
-            open: true,
-            message: '獲取版本列表失敗',
-            severity: 'error'
-          });
         }
+        
+        // 關閉上傳對話框
+        handleUploadClose();
       }
     } catch (error) {
       console.error('上傳檔案時發生錯誤:', error);
       setSnackbar({
         open: true,
-        message: '上傳失敗',
+        message: error.response?.data?.error || '上傳失敗',
         severity: 'error'
       });
     } finally {
