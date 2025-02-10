@@ -395,53 +395,71 @@ def upload_members():
             # 處理有效的資料
             version_number = generate_version_number()
             
-            # 清除所有現有會員資料和版本記錄
-            MemberVersion.query.delete()
-            Member.query.delete()
-            db.session.commit()
+            # 不再刪除所有資料，而是保留舊版本
+            success_count = 0
             
+            # 建立會員資料字典，用於快速查找
+            existing_members = {
+                member.member_number: member 
+                for member in Member.query.all()
+            }
+            
+            # 處理每一行資料
             for row in valid_rows:
-                member_data = {
-                    'member_number': row['會員編號'],
-                    'account': row['帳號'],
-                    'chinese_name': row.get('中文姓名', ''),
-                    'english_name': row.get('英文姓名', ''),
-                    'department_class': row.get('系級', ''),
-                    'is_guest': row['會員類型'] == '來賓',
-                    'is_admin': row['是否為管理員'] == '是',
-                    'gender': row['性別'],
-                    'handicap': float(row['差點']) if pd.notna(row.get('差點')) and str(row['差點']).strip() != '' else None
-                }
-
-                # 檢查是否已存在相同帳號的會員
-                existing_member = Member.query.filter_by(account=member_data['account']).first()
-                if existing_member:
-                    # 更新現有會員資料
-                    for key, value in member_data.items():
-                        setattr(existing_member, key, value)
-                    member = existing_member
-                else:
-                    # 創建新會員
-                    member = Member(**member_data)
-                    db.session.add(member)
-                
-                db.session.flush()
-
-                version = MemberVersion(
-                    member_id=member.id,
-                    version=version_number,
-                    data=member_data,
-                    created_at=datetime.now()
-                )
-                db.session.add(version)
-
-            db.session.commit()
-            logger.info(f'Successfully processed {len(valid_rows)} rows')
-            return jsonify({
-                'success': True,
-                'message': f'成功處理 {len(valid_rows)} 筆資料',
-                'success_count': len(valid_rows)
-            })
+                try:
+                    member_number = str(row['會員編號']).strip()
+                    
+                    # 檢查會員是否已存在
+                    member = existing_members.get(member_number)
+                    
+                    if not member:
+                        # 如果會員不存在，創建新會員
+                        member = Member(
+                            member_number=member_number,
+                            account=str(row['帳號']).strip(),
+                            chinese_name=str(row.get('中文姓名', '')).strip(),
+                            english_name=str(row.get('英文姓名', '')).strip(),
+                            department_class=str(row.get('系級', '')).strip(),
+                            is_guest=str(row['會員類型']).strip() == '來賓',
+                            is_admin=str(row['是否為管理員']).strip() == '是',
+                            gender=str(row['性別']).strip()
+                        )
+                        db.session.add(member)
+                        db.session.flush()  # 獲取新會員的 ID
+                    
+                    # 創建新的版本記錄
+                    version_data = {
+                        'handicap': float(str(row['差點']).strip()) if '差點' in row and str(row['差點']).strip() else None
+                    }
+                    
+                    member_version = MemberVersion(
+                        member_id=member.id,
+                        version=version_number,
+                        data=version_data
+                    )
+                    db.session.add(member_version)
+                    success_count += 1
+                    
+                except Exception as e:
+                    logger.error(f'Error processing row: {str(e)}')
+                    continue
+            
+            try:
+                db.session.commit()
+                logger.info(f'Successfully processed {success_count} members')
+                return jsonify({
+                    'message': '上傳成功',
+                    'version': version_number,
+                    'success_count': success_count
+                })
+            except Exception as e:
+                db.session.rollback()
+                logger.error(f'Error committing changes: {str(e)}')
+                return jsonify({
+                    'error': '儲存資料時發生錯誤',
+                    'error_messages': [str(e)],
+                    'success_count': 0
+                }), 500
 
         except pd.errors.EmptyDataError:
             error_msg = 'Excel 檔案為空'
