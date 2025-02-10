@@ -202,7 +202,10 @@ const Members = () => {
   
       // 重新獲取資料
       await fetchVersions();
-      await fetchMembers();
+      // 等待一段時間確保版本資料已更新
+      setTimeout(async () => {
+        await fetchMembers();
+      }, 1000);
   
     } catch (error) {
       console.error('Upload error:', error.response?.data || error);
