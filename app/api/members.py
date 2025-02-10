@@ -95,9 +95,10 @@ def process_excel_data(df):
 
                 # 驗證會員編號格式
                 member_number = str(row['會員編號']).strip()
-                if not (member_number[0].isalpha() and member_number[1:].isdigit()):
-                    row_errors.append(f'會員編號格式錯誤：{member_number}（必須以英文字母開頭，後接數字）')
-                    logger.error(f'第 {idx + 2} 行會員編號格式錯誤：{member_number}')
+                if len(member_number) == 0:
+                    row_errors.append('會員編號不能為空')
+                elif len(member_number) > 10:
+                    row_errors.append(f'會員編號長度不能超過10個字符：{member_number}')
 
                 # 驗證會員類型
                 member_type = str(row['會員類型']).strip()
