@@ -189,7 +189,7 @@ function Scores() {
 
   const fetchTournaments = async () => {
     try {
-      const response = await axios.get('/tournaments');
+      const response = await axios.get('/api/tournaments');
       setTournaments(response.data);
     } catch (error) {
       console.error('Error fetching tournaments:', error);
