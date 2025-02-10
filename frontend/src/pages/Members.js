@@ -625,7 +625,7 @@ const Members = () => {
       console.error('下載範本失敗:', error);
       setSnackbar({
         open: true,
-        message: '下載範本失敗，請稍後再試',
+        message: '下載範本失敗',
         severity: 'error'
       });
     }
