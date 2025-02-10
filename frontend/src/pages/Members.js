@@ -815,7 +815,7 @@ const Members = () => {
                 <li>中文姓名</li>
                 <li>會員類型（會員/來賓）</li>
                 <li>是否為管理員（是/否）</li>
-                <li>性別（男/女）</li>
+                <li>性別（M/F）</li>
               </ul>
             </Typography>
             <input
