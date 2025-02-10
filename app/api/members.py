@@ -75,44 +75,73 @@ def process_excel_data(df):
 
         # 驗證每一行數據
         errors = []
+        valid_rows = []
+        
         for idx, row in df.iterrows():
-            row_errors = []
-            
-            # 檢查必填欄位是否為空
-            for col in required_columns:
-                if pd.isna(row[col]) or str(row[col]).strip() == '':
-                    row_errors.append(f'{col}不能為空')
+            try:
+                row_errors = []
+                row_data = row.to_dict()  # 保存原始資料以便除錯
+                
+                # 檢查必填欄位是否為空
+                empty_fields = []
+                for col in required_columns:
+                    if pd.isna(row[col]) or str(row[col]).strip() == '':
+                        empty_fields.append(col)
+                
+                if empty_fields:
+                    row_errors.append(f'必填欄位為空：{", ".join(empty_fields)}')
+                    logger.error(f'第 {idx + 2} 行資料有空欄位：{empty_fields}')
+                    logger.error(f'該行資料內容：{row_data}')
 
-            # 驗證會員編號格式
-            member_number = str(row['會員編號']).strip()
-            if not (member_number.startswith('M') or member_number.startswith('F')) or not member_number[1:].isdigit():
-                row_errors.append('會員編號格式錯誤（必須以M或F開頭，後接數字）')
+                # 驗證會員編號格式
+                member_number = str(row['會員編號']).strip()
+                if not (member_number.startswith('M') or member_number.startswith('F')) or not member_number[1:].isdigit():
+                    row_errors.append(f'會員編號格式錯誤：{member_number}（必須以M或F開頭，後接數字）')
+                    logger.error(f'第 {idx + 2} 行會員編號格式錯誤：{member_number}')
 
-            # 驗證會員類型
-            member_type = str(row['會員類型']).strip()
-            if member_type not in ['會員', '來賓']:
-                row_errors.append('會員類型必須是「會員」或「來賓」')
+                # 驗證會員類型
+                member_type = str(row['會員類型']).strip()
+                if member_type not in ['會員', '來賓']:
+                    row_errors.append(f'會員類型錯誤：{member_type}（必須是「會員」或「來賓」）')
+                    logger.error(f'第 {idx + 2} 行會員類型錯誤：{member_type}')
 
-            # 驗證管理員欄位
-            is_admin = str(row['是否為管理員']).strip()
-            if is_admin not in ['是', '否']:
-                row_errors.append('是否為管理員必須是「是」或「否」')
+                # 驗證管理員欄位
+                is_admin = str(row['是否為管理員']).strip()
+                if is_admin not in ['是', '否']:
+                    row_errors.append(f'管理員欄位錯誤：{is_admin}（必須是「是」或「否」）')
+                    logger.error(f'第 {idx + 2} 行管理員欄位錯誤：{is_admin}')
 
-            # 驗證性別
-            gender = str(row['性別']).strip()
-            if gender not in ['男', '女']:
-                row_errors.append('性別必須是「男」或「女」')
+                # 驗證性別
+                gender = str(row['性別']).strip()
+                if gender not in ['男', '女']:
+                    row_errors.append(f'性別欄位錯誤：{gender}（必須是「男」或「女」）')
+                    logger.error(f'第 {idx + 2} 行性別欄位錯誤：{gender}')
 
-            # 如果有錯誤，加入到錯誤列表
-            if row_errors:
-                errors.append(f'第 {idx + 2} 行：{", ".join(row_errors)}')
+                # 如果有錯誤，加入到錯誤列表
+                if row_errors:
+                    error_msg = f'第 {idx + 2} 行發生以下錯誤：\n' + '\n'.join(row_errors)
+                    error_msg += f'\n該行完整資料：{row_data}'
+                    errors.append(error_msg)
+                else:
+                    valid_rows.append(row)
+                    
+            except Exception as e:
+                logger.error(f'處理第 {idx + 2} 行時發生異常：{str(e)}')
+                logger.error(f'該行資料內容：{row.to_dict()}')
+                errors.append(f'第 {idx + 2} 行處理失敗：{str(e)}')
 
         if errors:
-            raise ValueError('\n'.join(errors))
+            error_summary = '\n\n'.join(errors)
+            logger.error(f'資料驗證發現 {len(errors)} 個錯誤：\n{error_summary}')
+            raise ValueError(f'資料驗證發現 {len(errors)} 個錯誤：\n{error_summary}')
 
-        return df
+        # 創建新的 DataFrame，只包含有效的資料行
+        valid_df = pd.DataFrame(valid_rows)
+        logger.info(f'成功處理 {len(valid_rows)} 行資料')
+        return valid_df
 
     except Exception as e:
+        logger.error(f'處理 Excel 數據時發生錯誤：{str(e)}')
         raise ValueError(f'處理 Excel 數據時發生錯誤：{str(e)}')
 
 def _parse_bool(value):
@@ -228,31 +257,17 @@ def upload_members():
         file.save(filepath)
         logger.info(f'File saved to: {filepath}')
         
-        # Read Excel file
         try:
             logger.info('Reading Excel file...')
             df = pd.read_excel(filepath, dtype=str)  # 先將所有欄位讀取為字符串
             logger.info(f'Excel file read successfully: {len(df)} rows')
             logger.info(f'Columns: {df.columns.tolist()}')
-            logger.info(f'First row: {df.iloc[0].to_dict() if len(df) > 0 else "No data"}')
             
-            # 檢查是否為空檔案
             if len(df) == 0:
                 logger.error('Empty Excel file')
                 return jsonify({
                     'error': 'Excel 檔案為空',
                     'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
-                    'success_count': 0
-                }), 400
-                
-            # 檢查欄位名稱
-            required_columns = ['帳號', '中文姓名', '會員編號', '會員類型', '是否為管理員', '性別']
-            missing_columns = [col for col in required_columns if col not in df.columns]
-            if missing_columns:
-                logger.error(f'Missing columns: {missing_columns}')
-                return jsonify({
-                    'error': '缺少必要欄位',
-                    'error_messages': [f'缺少必要欄位: {", ".join(missing_columns)}'],
                     'success_count': 0
                 }), 400
                 
@@ -264,44 +279,92 @@ def upload_members():
                 'error_messages': [str(e)],
                 'success_count': 0
             }), 400
-        
-        # Process data
+            
         try:
             logger.info('Processing Excel data...')
-            df = process_excel_data(df)
-            logger.info(f'Data processed. Success: {len(df)} members')
+            processed_df = process_excel_data(df)
+            success_count = len(processed_df)
+            logger.info(f'Successfully processed {success_count} rows')
             
-            if len(df) == 0:
-                logger.error('No records processed successfully')
+            if success_count == 0:
                 return jsonify({
-                    'error': '資料處理失敗',
-                    'error_messages': ['資料處理失敗'],
+                    'error': '沒有有效的資料可以處理',
+                    'error_messages': ['所有資料行都包含錯誤'],
                     'success_count': 0
                 }), 400
-            
+                
+            # 處理成功的資料
+            version_number = generate_version_number()
+            for _, row in processed_df.iterrows():
+                try:
+                    member_data = {
+                        'member_number': row['會員編號'],
+                        'account': row['帳號'],
+                        'chinese_name': row.get('中文姓名', ''),
+                        'english_name': row.get('英文姓名', ''),
+                        'department_class': row.get('系級', ''),
+                        'is_guest': row['會員類型'] == '來賓',
+                        'is_admin': row['是否為管理員'] == '是',
+                        'gender': row['性別'],
+                        'handicap': float(row['差點']) if pd.notna(row.get('差點')) else None
+                    }
+                    
+                    # 檢查會員是否已存在
+                    member = Member.query.filter_by(member_number=member_data['member_number']).first()
+                    if not member:
+                        member = Member(**member_data)
+                        db.session.add(member)
+                        db.session.flush()
+                    else:
+                        for key, value in member_data.items():
+                            setattr(member, key, value)
+                    
+                    # 創建版本記錄
+                    version = MemberVersion(
+                        member_id=member.id,
+                        version=version_number,
+                        data=member_data,
+                        created_at=datetime.now()
+                    )
+                    db.session.add(version)
+                    
+                except Exception as e:
+                    logger.error(f'Error processing row: {row.to_dict()}')
+                    logger.error(str(e))
+                    db.session.rollback()
+                    raise
+                    
+            db.session.commit()
             return jsonify({
                 'success': True,
-                'message': f'成功處理 {len(df)} 筆資料',
-                'success_count': len(df)
+                'message': f'成功處理 {success_count} 筆資料',
+                'success_count': success_count
             })
             
-        except Exception as e:
-            logger.error(f'Error processing data: {str(e)}')
-            logger.error(f'Traceback: {traceback.format_exc()}')
+        except ValueError as e:
             return jsonify({
                 'error': '資料處理過程中發生錯誤',
-                'error_messages': [f'錯誤詳情: {str(e)}'],
+                'error_messages': str(e).split('\n'),
                 'success_count': 0
             }), 400
             
-    except Exception as e:
-        logger.error(f'Unexpected error in upload: {str(e)}')
-        logger.error(traceback.format_exc())
-        return jsonify({
-            'error': '檔案上傳失敗',
-            'error_messages': [str(e)],
-            'success_count': 0
-        }), 500
+        except Exception as e:
+            logger.error(f'Error processing data: {str(e)}')
+            logger.error(traceback.format_exc())
+            return jsonify({
+                'error': '資料處理過程中發生錯誤',
+                'error_messages': [str(e)],
+                'success_count': 0
+            }), 400
+            
+    finally:
+        # 清理臨時檔案
+        try:
+            if 'filepath' in locals() and os.path.exists(filepath):
+                os.remove(filepath)
+                logger.info(f'Temporary file removed: {filepath}')
+        except Exception as e:
+            logger.error(f'Error removing temporary file: {str(e)}')
 
 @bp.route('/batch-delete', methods=['POST'])
 def batch_delete_members():
