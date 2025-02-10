@@ -255,11 +255,11 @@ def upload_members():
                 'success_count': 0
             }), 400
 
-        # Ensure upload directory exists
+        # 確保上傳目錄存在
         upload_dir = ensure_upload_dir()
         logger.info(f'Upload directory: {upload_dir}')
         
-        # Save file with secure filename
+        # 使用安全的檔案名稱儲存檔案
         filename = secure_filename(file.filename)
         filepath = os.path.join(upload_dir, filename)
         file.save(filepath)
@@ -267,6 +267,7 @@ def upload_members():
         
         try:
             logger.info('Reading Excel file...')
+            # 讀取 Excel 檔案時不過濾空值
             df = pd.read_excel(filepath, dtype=str, na_filter=False)
             logger.info(f'Excel file read successfully: {len(df)} rows')
             logger.info(f'Columns found in file: {df.columns.tolist()}')
@@ -283,19 +284,15 @@ def upload_members():
             required_columns = ['會員編號', '會員類型', '帳號', '是否為管理員', '性別']
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
+                error_msg = f'缺少以下必要欄位：{", ".join(missing_columns)}'
+                logger.error(error_msg)
                 return jsonify({
                     'error': '缺少必要欄位',
-                    'error_messages': [f'缺少以下必要欄位：{", ".join(missing_columns)}'],
+                    'error_messages': [error_msg],
                     'success_count': 0
                 }), 400
 
-            # 清理數據
-            for col in df.columns:
-                if df[col].dtype == object:
-                    df[col] = df[col].astype(str).str.strip()
-                    df[col] = df[col].replace(['(null)', 'null', 'nan', ''], '')
-
-            # 驗證每一行數據
+            # 清理和驗證數據
             error_messages = []
             valid_rows = []
             
@@ -325,9 +322,16 @@ def upload_members():
                 if row_errors:
                     error_messages.extend(row_errors)
                 else:
-                    valid_rows.append(row)
+                    # 清理數據
+                    row_data = row.copy()
+                    for col in df.columns:
+                        if pd.isna(row_data[col]) or str(row_data[col]).strip() in ['(null)', 'null', 'nan', '']:
+                            row_data[col] = ''
+                    valid_rows.append(row_data)
 
             if error_messages:
+                logger.error('Validation errors found')
+                logger.error('\n'.join(error_messages))
                 return jsonify({
                     'error': '資料驗證失敗',
                     'error_messages': error_messages,
@@ -346,7 +350,7 @@ def upload_members():
                     'is_guest': row['會員類型'] == '來賓',
                     'is_admin': row['是否為管理員'] == '是',
                     'gender': row['性別'],
-                    'handicap': float(row['差點']) if pd.notna(row.get('差點')) else None
+                    'handicap': float(row['差點']) if pd.notna(row.get('差點')) and str(row['差點']).strip() != '' else None
                 }
 
                 member = Member.query.filter_by(member_number=member_data['member_number']).first()
@@ -367,12 +371,20 @@ def upload_members():
                 db.session.add(version)
 
             db.session.commit()
+            logger.info(f'Successfully processed {len(valid_rows)} rows')
             return jsonify({
                 'success': True,
                 'message': f'成功處理 {len(valid_rows)} 筆資料',
                 'success_count': len(valid_rows)
             })
 
+        except pd.errors.EmptyDataError:
+            logger.error('Empty Excel file')
+            return jsonify({
+                'error': 'Excel 檔案為空',
+                'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
+                'success_count': 0
+            }), 400
         except Exception as e:
             logger.error(f'Error processing data: {str(e)}')
             logger.error(traceback.format_exc())
