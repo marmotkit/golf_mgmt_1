@@ -603,7 +603,7 @@ const Members = () => {
 
   const handleDownloadTemplate = async () => {
     try {
-      const response = await axios.get('/api/members/template', {
+      const response = await axios.get('/members/template', {
         responseType: 'blob'
       });
       
