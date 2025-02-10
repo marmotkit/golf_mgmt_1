@@ -74,6 +74,9 @@ def process_excel_data(df):
         # 檢查每個必要欄位
         column_mapping = {}
         missing_columns = []
+        available_columns = df.columns.tolist()
+        
+        logger.info(f'Excel檔案中的欄位：{available_columns}')
         
         for required_col, possible_names in required_columns.items():
             found = False
@@ -86,7 +89,9 @@ def process_excel_data(df):
                 missing_columns.append(required_col)
 
         if missing_columns:
-            raise ValueError(f'缺少必要欄位：{", ".join(missing_columns)}\n可用的欄位名稱：{", ".join(df.columns)}')
+            error_msg = f'缺少必要欄位：{", ".join(missing_columns)}\n可用的欄位：{", ".join(available_columns)}'
+            logger.error(error_msg)
+            raise ValueError(error_msg)
 
         # 重命名欄位以統一處理
         df = df.rename(columns={v: k for k, v in column_mapping.items()})
@@ -95,7 +100,7 @@ def process_excel_data(df):
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].astype(str).str.strip()
-                df[col] = df[col].replace(['(null)', 'null', 'nan', ''], '')
+                df[col] = df[col].replace(['(null)', 'null', 'nan', 'None', ''], '')
 
         # 驗證每一行數據
         errors = []
@@ -124,18 +129,25 @@ def process_excel_data(df):
 
                 # 驗證會員類型
                 member_type = str(row['會員類型']).strip()
-                if member_type not in ['會員', '來賓']:
+                if member_type and member_type not in ['會員', '來賓']:
                     row_errors.append(f'第 {idx + 2} 行：會員類型必須是「會員」或「來賓」，目前值為：{member_type}')
 
                 # 驗證管理員欄位
                 is_admin = str(row['是否為管理員']).strip()
-                if is_admin not in ['是', '否']:
+                if is_admin and is_admin not in ['是', '否']:
                     row_errors.append(f'第 {idx + 2} 行：是否為管理員必須是「是」或「否」，目前值為：{is_admin}')
 
                 # 驗證性別
                 gender = str(row['性別']).strip()
-                if gender not in ['M', 'F']:
+                if gender and gender not in ['M', 'F']:
                     row_errors.append(f'第 {idx + 2} 行：性別必須是「M」或「F」，目前值為：{gender}')
+
+                # 驗證差點格式（如果存在）
+                if '差點' in row and str(row['差點']).strip():
+                    try:
+                        handicap = float(str(row['差點']).strip())
+                    except ValueError:
+                        row_errors.append(f'第 {idx + 2} 行：差點必須是數字，目前值為：{row["差點"]}')
 
                 # 如果有錯誤，加入到錯誤列表
                 if row_errors:
