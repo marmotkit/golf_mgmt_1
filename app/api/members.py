@@ -394,6 +394,12 @@ def upload_members():
 
             # 處理有效的資料
             version_number = generate_version_number()
+            
+            # 清除所有現有會員資料和版本記錄
+            MemberVersion.query.delete()
+            Member.query.delete()
+            db.session.commit()
+            
             for row in valid_rows:
                 member_data = {
                     'member_number': row['會員編號'],
