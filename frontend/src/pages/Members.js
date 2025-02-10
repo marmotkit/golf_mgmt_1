@@ -601,6 +601,34 @@ const Members = () => {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/members/template', { responseType: 'blob' });
+      
+      // 創建下載連結
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'member_template.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      setSnackbar({ open: true, message: '範本下載成功', severity: 'success' });
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      setSnackbar({ 
+        open: true, 
+        message: error.response?.data?.error || '範本下載失敗', 
+        severity: 'error' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -662,10 +690,8 @@ const Members = () => {
               variant="contained"
               color="primary"
               startIcon={<DownloadIcon />}
-              onClick={() => {
-                const baseUrl = process.env.REACT_APP_API_BASE_URL || '';
-                window.open(`${baseUrl}/api/members/template`, '_blank');
-              }}
+              onClick={handleDownloadTemplate}
+              disabled={loading}
             >
               下載範本
             </Button>
