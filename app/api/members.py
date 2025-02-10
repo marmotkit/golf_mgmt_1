@@ -251,9 +251,10 @@ def upload_members():
     
     try:
         if 'file' not in request.files:
-            logger.error('No file in request')
+            error_msg = '未提供檔案'
+            logger.error(error_msg)
             return jsonify({
-                'error': '未提供檔案',
+                'error': error_msg,
                 'error_messages': ['請選擇要上傳的 Excel 檔案'],
                 'success_count': 0
             }), 400
@@ -262,18 +263,20 @@ def upload_members():
         logger.info(f'Received file: {file.filename}')
         
         if file.filename == '':
-            logger.error('Empty filename')
+            error_msg = '未選擇檔案'
+            logger.error(error_msg)
             return jsonify({
-                'error': '未選擇檔案',
+                'error': error_msg,
                 'error_messages': ['請選擇要上傳的 Excel 檔案'],
                 'success_count': 0
             }), 400
             
-        if not file.filename.endswith('.xlsx'):
-            logger.error('Invalid file type')
+        if not file.filename.endswith(('.xlsx', '.xls')):
+            error_msg = '檔案格式錯誤'
+            logger.error(f'{error_msg}: {file.filename}')
             return jsonify({
-                'error': '檔案格式錯誤',
-                'error_messages': ['只允許上傳 .xlsx 格式的檔案'],
+                'error': error_msg,
+                'error_messages': ['只允許上傳 .xlsx 或 .xls 格式的檔案'],
                 'success_count': 0
             }), 400
 
@@ -295,24 +298,51 @@ def upload_members():
             logger.info(f'Columns found in file: {df.columns.tolist()}')
             
             if len(df) == 0:
-                logger.error('Empty Excel file')
+                error_msg = 'Excel 檔案為空'
+                logger.error(error_msg)
                 return jsonify({
-                    'error': 'Excel 檔案為空',
+                    'error': error_msg,
                     'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
                     'success_count': 0
                 }), 400
 
             # 檢查必要欄位
-            required_columns = ['會員編號', '會員類型', '帳號', '是否為管理員', '性別']
-            missing_columns = [col for col in required_columns if col not in df.columns]
+            required_columns = {
+                '會員編號': ['會員編號', '會員號碼'],
+                '會員類型': ['會員類型', '類型'],
+                '帳號': ['帳號', '帳戶', 'account'],
+                '是否為管理員': ['是否為管理員', '管理員'],
+                '性別': ['性別', 'gender']
+            }
+
+            # 檢查每個必要欄位
+            missing_columns = []
+            column_mapping = {}
+            available_columns = df.columns.tolist()
+            
+            logger.info(f'Available columns in file: {available_columns}')
+            
+            for required_col, possible_names in required_columns.items():
+                found = False
+                for name in possible_names:
+                    if name in df.columns:
+                        column_mapping[required_col] = name
+                        found = True
+                        break
+                if not found:
+                    missing_columns.append(required_col)
+
             if missing_columns:
-                error_msg = f'缺少以下必要欄位：{", ".join(missing_columns)}'
+                error_msg = f'缺少必要欄位：{", ".join(missing_columns)}\n可用的欄位：{", ".join(available_columns)}'
                 logger.error(error_msg)
                 return jsonify({
                     'error': '缺少必要欄位',
                     'error_messages': [error_msg],
                     'success_count': 0
                 }), 400
+
+            # 重命名欄位以統一處理
+            df = df.rename(columns={v: k for k, v in column_mapping.items()})
 
             # 清理和驗證數據
             error_messages = []
@@ -322,34 +352,36 @@ def upload_members():
                 row_errors = []
                 
                 # 檢查必填欄位
-                for col in required_columns:
+                for col in required_columns.keys():
                     if pd.isna(row[col]) or str(row[col]).strip() == '':
                         row_errors.append(f'第 {idx + 2} 行：{col} 不能為空')
 
                 # 驗證會員類型
                 member_type = str(row['會員類型']).strip()
-                if member_type not in ['會員', '來賓']:
+                if member_type and member_type not in ['會員', '來賓']:
                     row_errors.append(f'第 {idx + 2} 行：會員類型必須是「會員」或「來賓」，目前值為：{member_type}')
 
                 # 驗證管理員欄位
                 is_admin = str(row['是否為管理員']).strip()
-                if is_admin not in ['是', '否']:
+                if is_admin and is_admin not in ['是', '否']:
                     row_errors.append(f'第 {idx + 2} 行：是否為管理員必須是「是」或「否」，目前值為：{is_admin}')
 
                 # 驗證性別
                 gender = str(row['性別']).strip()
-                if gender not in ['M', 'F']:
+                if gender and gender not in ['M', 'F']:
                     row_errors.append(f'第 {idx + 2} 行：性別必須是「M」或「F」，目前值為：{gender}')
+
+                # 驗證差點格式（如果存在）
+                if '差點' in row and str(row['差點']).strip():
+                    try:
+                        handicap = float(str(row['差點']).strip())
+                    except ValueError:
+                        row_errors.append(f'第 {idx + 2} 行：差點必須是數字，目前值為：{row["差點"]}')
 
                 if row_errors:
                     error_messages.extend(row_errors)
                 else:
-                    # 清理數據
-                    row_data = row.copy()
-                    for col in df.columns:
-                        if pd.isna(row_data[col]) or str(row_data[col]).strip() in ['(null)', 'null', 'nan', '']:
-                            row_data[col] = ''
-                    valid_rows.append(row_data)
+                    valid_rows.append(row)
 
             if error_messages:
                 logger.error('Validation errors found')
@@ -406,26 +438,29 @@ def upload_members():
             })
 
         except pd.errors.EmptyDataError:
-            logger.error('Empty Excel file')
+            error_msg = 'Excel 檔案為空'
+            logger.error(error_msg)
             return jsonify({
-                'error': 'Excel 檔案為空',
+                'error': error_msg,
                 'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
                 'success_count': 0
             }), 400
         except Exception as e:
-            logger.error(f'Error processing data: {str(e)}')
+            error_msg = f'資料處理過程中發生錯誤：{str(e)}'
+            logger.error(error_msg)
             logger.error(traceback.format_exc())
             return jsonify({
-                'error': '資料處理過程中發生錯誤',
+                'error': error_msg,
                 'error_messages': [str(e)],
                 'success_count': 0
             }), 400
 
     except Exception as e:
-        logger.error(f'Unexpected error: {str(e)}')
+        error_msg = f'系統錯誤：{str(e)}'
+        logger.error(error_msg)
         logger.error(traceback.format_exc())
         return jsonify({
-            'error': '系統錯誤',
+            'error': error_msg,
             'error_messages': [str(e)],
             'success_count': 0
         }), 500
