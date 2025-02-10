@@ -66,7 +66,7 @@ const Members = () => {
 
   const fetchVersions = async () => {
     try {
-      const response = await axios.get(`/members/versions`);
+      const response = await axios.get(`/api/members/versions`);
       setVersionList(response.data);
       if (response.data.length > 0) {
         setCurrentVersion(response.data[0]); // 最新的版本
@@ -82,7 +82,7 @@ const Members = () => {
       setLoading(true);
       // 使用當前版本號獲取會員資料
       const version = currentVersion?.version;
-      const response = await axios.get(`/members${version ? `?version=${version}` : ''}`);
+      const response = await axios.get(`/api/members${version ? `?version=${version}` : ''}`);
       // 排序會員：先按會員編號，再按會員身份（來賓排後面）
       const sortedMembers = response.data.sort((a, b) => {
         if (a.is_guest !== b.is_guest) {
@@ -105,7 +105,7 @@ const Members = () => {
       return;
     }
     try {
-      const response = await axios.post(`/members/compare`, compareVersions);
+      const response = await axios.post(`/api/members/compare`, compareVersions);
       setCompareResults(response.data);
     } catch (error) {
       console.error('Error comparing versions:', error);
@@ -134,9 +134,9 @@ const Members = () => {
   const handleConfirmDelete = async () => {
     try {
       console.log('開始刪除版本操作:', versionToDelete);
-      console.log('API 請求 URL:', `/members/versions/${versionToDelete}`);
+      console.log('API 請求 URL:', `/api/members/versions/${versionToDelete}`);
       
-      const response = await axios.delete(`/members/versions/${versionToDelete}`);
+      const response = await axios.delete(`/api/members/versions/${versionToDelete}`);
       console.log('刪除請求響應:', response.data);
       
       // 重新載入版本列表
@@ -185,7 +185,7 @@ const Members = () => {
       
       const response = await axios({
         method: 'post',
-        url: '/members/upload',
+        url: '/api/members/upload',
         data: formData,
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -436,10 +436,10 @@ const Members = () => {
       console.log('Raw Edit Member Data (stringified):', JSON.stringify(editMember, null, 2));
       console.log('Processed Update Data:', updateData);
       console.log('Processed Update Data (stringified):', JSON.stringify(updateData, null, 2));
-      console.log('Update URL:', `/members/${editMember.id}`);
+      console.log('Update URL:', `/api/members/${editMember.id}`);
       
       const response = await axios.patch(
-        `/members/${editMember.id}`,
+        `/api/members/${editMember.id}`,
         updateData,
         {
           headers: { 'Content-Type': 'application/json' }
@@ -537,7 +537,7 @@ const Members = () => {
     if (!window.confirm('確定要刪除此會員嗎？')) return;
     
     try {
-      await axios.delete(`/members/${memberId}`);
+      await axios.delete(`/api/members/${memberId}`);
       fetchMembers();
       setSnackbar({ open: true, message: '刪除成功', severity: 'success' });
     } catch (error) {
@@ -577,7 +577,7 @@ const Members = () => {
       setLoading(true);
       const version = currentVersion?.version;
       const response = await axios.get(
-        `/members/export${version ? `?version=${version}` : ''}`,
+        `/api/members/export${version ? `?version=${version}` : ''}`,
         { responseType: 'blob' }
       );
       
@@ -606,7 +606,7 @@ const Members = () => {
 
   const handleDownloadTemplate = async () => {
     try {
-      const response = await axios.get('/members/template', {
+      const response = await axios.get('/api/members/template', {
         responseType: 'blob'
       });
       
