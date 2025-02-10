@@ -1139,29 +1139,19 @@ def download_template():
             cell.border = border
             cell.fill = PatternFill(start_color="CCCCCC", end_color="CCCCCC", fill_type="solid")
 
-        # 創建臨時文件
-        temp_file = os.path.join(current_app.instance_path, 'member_template.xlsx')
-        os.makedirs(os.path.dirname(temp_file), exist_ok=True)
-        
-        # 保存文件
-        wb.save(temp_file)
+        # 使用 BytesIO 保存文件
+        excel_file = BytesIO()
+        wb.save(excel_file)
+        excel_file.seek(0)
 
-        # 發送文件
         return send_file(
-            temp_file,
+            excel_file,
             mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             as_attachment=True,
             download_name='member_template.xlsx'
         )
 
     except Exception as e:
-        current_app.logger.error(f"生成範本時發生錯誤: {str(e)}")
+        logger.error(f"生成範本時發生錯誤: {str(e)}")
+        logger.error(traceback.format_exc())
         return jsonify({'error': '生成範本失敗'}), 500
-
-    finally:
-        # 清理臨時文件
-        try:
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-        except Exception as e:
-            current_app.logger.error(f"清理臨時文件時發生錯誤: {str(e)}")
