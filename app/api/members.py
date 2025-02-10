@@ -12,7 +12,7 @@ from sqlalchemy import Boolean
 import io
 from io import BytesIO
 from openpyxl import Workbook
-from openpyxl.styles import Font, Alignment, Border, PatternFill
+from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.utils import get_column_letter
 
 bp = Blueprint('members', __name__)
