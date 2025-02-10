@@ -29,6 +29,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
 import axios from '../utils/axios';
 import { useSnackbar } from 'notistack';
+import DownloadIcon from '@mui/icons-material/Download';
 
 function TabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -386,11 +387,13 @@ function Scores() {
                 </Typography>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={handleClearScores}
+                    variant="contained"
+                    color="success"
+                    onClick={handleExportScores}
+                    disabled={scores.length === 0}
+                    startIcon={<DownloadIcon />}
                   >
-                    清除所有成績
+                    匯出成績
                   </Button>
                   <Button
                     variant="contained"
@@ -399,12 +402,11 @@ function Scores() {
                     匯入成績
                   </Button>
                   <Button
-                    variant="contained"
-                    color="success"
-                    onClick={handleExportScores}
-                    disabled={scores.length === 0}
+                    variant="outlined"
+                    color="error"
+                    onClick={handleClearScores}
                   >
-                    匯出成績
+                    清除所有成績
                   </Button>
                 </Box>
               </Box>
