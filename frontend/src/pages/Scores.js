@@ -191,7 +191,7 @@ function Scores() {
 
   const fetchTournaments = async () => {
     try {
-      const response = await tournamentService.getTournaments();
+      const response = await tournamentService.getAllTournaments();
       setTournaments(response);
     } catch (error) {
       console.error('Error fetching tournaments:', error);
