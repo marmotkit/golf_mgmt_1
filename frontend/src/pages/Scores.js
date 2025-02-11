@@ -360,18 +360,6 @@ function Scores() {
               選擇賽事
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {tournaments.map((tournament) => (
-                  <Button
-                    key={tournament.id}
-                    variant={selectedTournament?.id === tournament.id ? 'contained' : 'outlined'}
-                    onClick={() => handleTournamentSelect(tournament)}
-                  >
-                    {tournament.name}
-                  </Button>
-                ))}
-              </Box>
-              
               {selectedTournament && (
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
@@ -398,6 +386,17 @@ function Scores() {
                   </Button>
                 </Box>
               )}
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {tournaments.map((tournament) => (
+                  <Button
+                    key={tournament.id}
+                    variant={selectedTournament?.id === tournament.id ? 'contained' : 'outlined'}
+                    onClick={() => handleTournamentSelect(tournament)}
+                  >
+                    {tournament.name}
+                  </Button>
+                ))}
+              </Box>
             </Box>
           </Box>
 
