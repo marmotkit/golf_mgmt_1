@@ -359,25 +359,20 @@ function Scores() {
             <Typography variant="h6" gutterBottom>
               選擇賽事
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              {tournaments.map((tournament) => (
-                <Button
-                  key={tournament.id}
-                  variant={selectedTournament?.id === tournament.id ? 'contained' : 'outlined'}
-                  onClick={() => handleTournamentSelect(tournament)}
-                >
-                  {tournament.name}
-                </Button>
-              ))}
-            </Box>
-          </Box>
-
-          {selectedTournament && (
-            <>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6">
-                  {selectedTournament.name} 成績表
-                </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                {tournaments.map((tournament) => (
+                  <Button
+                    key={tournament.id}
+                    variant={selectedTournament?.id === tournament.id ? 'contained' : 'outlined'}
+                    onClick={() => handleTournamentSelect(tournament)}
+                  >
+                    {tournament.name}
+                  </Button>
+                ))}
+              </Box>
+              
+              {selectedTournament && (
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="contained"
@@ -385,9 +380,8 @@ function Scores() {
                     startIcon={<DownloadIcon />}
                     onClick={handleExportScores}
                     disabled={scores.length === 0}
-                    sx={{ mr: 2 }}
                   >
-                    匯出成績
+                    匯出成績表
                   </Button>
                   <Button
                     variant="contained"
@@ -399,11 +393,20 @@ function Scores() {
                     variant="outlined"
                     color="error"
                     onClick={handleClearScores}
-                    sx={{ ml: 2 }}
                   >
                     清除所有成績
                   </Button>
                 </Box>
+              )}
+            </Box>
+          </Box>
+
+          {selectedTournament && (
+            <>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  {selectedTournament.name} 成績表
+                </Typography>
               </Box>
 
               <Box sx={{ height: 400, width: '100%' }}>
