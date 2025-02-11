@@ -655,6 +655,36 @@ const Members = () => {
     }
   };
 
+  const handleDownloadScores = async (tournamentId) => {
+    try {
+      const response = await axios.get(`/scores/export/${tournamentId}`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `tournament_scores.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      setSnackbar({
+        open: true,
+        message: '成績下載成功',
+        severity: 'success'
+      });
+    } catch (error) {
+      console.error('下載成績失敗:', error);
+      setSnackbar({
+        open: true,
+        message: '下載成績失敗',
+        severity: 'error'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
@@ -813,10 +843,13 @@ const Members = () => {
                 <li>會員編號（M開頭為男性會員，F開頭為女性會員）</li>
                 <li>帳號</li>
                 <li>中文姓名</li>
-                <li>會員類型（會員/來賓）</li>
+                <li>會員類型（會員/來賓）或（會員/來賓）欄位</li>
                 <li>是否為管理員（是/否）</li>
                 <li>性別（M/F）</li>
               </ul>
+              <Typography variant="body2" color="text.secondary">
+                註：「會員類型」欄位也可以使用「會員/來賓」作為欄位名稱；「差點」欄位也可以使用「最新差點」作為欄位名稱。
+              </Typography>
             </Typography>
             <input
               type="file"
