@@ -278,3 +278,38 @@ class GamePrize(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+class Award(db.Model):
+    __tablename__ = 'awards'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
+    award_type = db.Column(db.String(50), nullable=False)  # 獎項類型
+    category = db.Column(db.String(50))  # 組別（如：一般組、長青組）
+    rank = db.Column(db.Integer)  # 名次（如淨桿1-10名）
+    member_id = db.Column(db.Integer, db.ForeignKey('members.id'))
+    member_name = db.Column(db.String(100))
+    score = db.Column(db.Integer)  # 成績（如總桿數）
+    hole_number = db.Column(db.Integer)  # 洞號（如 HIO 發生在第幾洞）
+    description = db.Column(db.String(200))  # 額外描述
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    tournament = db.relationship('Tournament', backref=db.backref('awards', lazy=True))
+    member = db.relationship('Member', backref=db.backref('awards', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tournament_id': self.tournament_id,
+            'award_type': self.award_type,
+            'category': self.category,
+            'rank': self.rank,
+            'member_id': self.member_id,
+            'member_name': self.member_name,
+            'score': self.score,
+            'hole_number': self.hole_number,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
