@@ -220,7 +220,10 @@ function Scores() {
   };
 
   const handleFileUpload = async () => {
-    if (!selectedFile || !selectedTournament) return;
+    if (!selectedFile || !selectedTournament) {
+      enqueueSnackbar('請選擇檔案和賽事', { variant: 'error' });
+      return;
+    }
 
     const formData = new FormData();
     formData.append('file', selectedFile);
@@ -228,16 +231,16 @@ function Scores() {
 
     try {
       await scoreService.uploadScores(selectedTournament.id, formData);
+      enqueueSnackbar('成績上傳成功', { variant: 'success' });
       setOpenUploadDialog(false);
       setSelectedFile(null);
       fetchScores(selectedTournament.id);
     } catch (error) {
       console.error('Error uploading scores:', error);
-      if (error.response) {
-        console.error('Error details:', error.response.data);
-        alert(`上傳失敗: ${error.response.data.error}\n${error.response.data.details || ''}`);
+      if (error.response?.data?.error) {
+        enqueueSnackbar(`上傳失敗: ${error.response.data.error}`, { variant: 'error' });
       } else {
-        alert('上傳失敗：請檢查文件格式是否正確');
+        enqueueSnackbar('上傳失敗：請檢查文件格式是否正確', { variant: 'error' });
       }
     }
   };
@@ -475,14 +478,36 @@ function Scores() {
           <Box sx={{ mt: 2 }}>
             <input
               type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={(e) => setSelectedFile(e.target.files[0])}
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  if (file.size > 10 * 1024 * 1024) {
+                    enqueueSnackbar('檔案大小不能超過 10MB', { variant: 'error' });
+                    return;
+                  }
+                  setSelectedFile(file);
+                }
+              }}
             />
+            <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+              支援的檔案格式：Excel (.xlsx, .xls)
+            </Typography>
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenUploadDialog(false)}>取消</Button>
-          <Button onClick={handleFileUpload} variant="contained" disabled={!selectedFile}>
+          <Button onClick={() => {
+            setOpenUploadDialog(false);
+            setSelectedFile(null);
+          }}>
+            取消
+          </Button>
+          <Button 
+            onClick={handleFileUpload} 
+            variant="contained" 
+            disabled={!selectedFile}
+            color="primary"
+          >
             上傳
           </Button>
         </DialogActions>

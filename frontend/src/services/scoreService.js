@@ -36,7 +36,11 @@ export const getScores = async (tournamentId) => {
 // 上傳成績
 export const uploadScores = async (tournamentId, formData) => {
   try {
-    const response = await api.post('/scores/upload', formData);
+    const response = await api.post('/scores/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      }
+    });
     return response.data;
   } catch (error) {
     handleError(error);
