@@ -356,6 +356,33 @@ function Scores() {
 
         <TabPanel value={value} index={0}>
           <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<DownloadIcon />}
+                onClick={handleExportScores}
+                disabled={!selectedTournament || scores.length === 0}
+              >
+                匯出成績表
+              </Button>
+              <Button
+                variant="contained"
+                onClick={() => setOpenUploadDialog(true)}
+                disabled={!selectedTournament}
+              >
+                匯入成績
+              </Button>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleClearScores}
+                disabled={!selectedTournament}
+              >
+                清除所有成績
+              </Button>
+            </Box>
+
             <Typography variant="h6" gutterBottom>
               選擇賽事
             </Typography>
@@ -370,32 +397,6 @@ function Scores() {
                     {tournament.name}
                   </Button>
                 ))}
-                {selectedTournament && (
-                  <>
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      startIcon={<DownloadIcon />}
-                      onClick={handleExportScores}
-                      disabled={scores.length === 0}
-                    >
-                      匯出成績表
-                    </Button>
-                    <Button
-                      variant="contained"
-                      onClick={() => setOpenUploadDialog(true)}
-                    >
-                      匯入成績
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      onClick={handleClearScores}
-                    >
-                      清除所有成績
-                    </Button>
-                  </>
-                )}
               </Box>
             </Box>
           </Box>
