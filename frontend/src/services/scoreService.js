@@ -26,7 +26,7 @@ const handleError = (error) => {
 // 獲取成績列表
 export const getScores = async (tournamentId) => {
   try {
-    const response = await api.get(`/?tournament_id=${tournamentId}`);
+    const response = await api.get(`/scores?tournament_id=${tournamentId}`);
     return response.data;
   } catch (error) {
     handleError(error);
