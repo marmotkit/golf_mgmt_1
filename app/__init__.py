@@ -56,7 +56,13 @@ def create_app(config_class=Config):
             response = app.make_default_options_response()
         
         # 檢查是否來自允許的域名
-        if request.headers.get("Origin") == "https://golf-mgmt-1-frontend.onrender.com":
+        allowed_origins = [
+            "https://golf-mgmt-1-frontend.onrender.com",
+            "https://golf-mgmt-1-frontend-dev.onrender.com"
+        ]
+        origin = request.headers.get("Origin")
+        
+        if origin in allowed_origins:
             # 刪除可能存在的舊頭部
             response.headers.pop("Access-Control-Allow-Origin", None)
             response.headers.pop("Access-Control-Allow-Methods", None)
@@ -64,7 +70,7 @@ def create_app(config_class=Config):
             response.headers.pop("Access-Control-Allow-Credentials", None)
             
             # 添加新的頭部
-            response.headers.set("Access-Control-Allow-Origin", "https://golf-mgmt-1-frontend.onrender.com")
+            response.headers.set("Access-Control-Allow-Origin", origin)
             response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
             response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
             response.headers.set("Access-Control-Allow-Credentials", "true")
