@@ -360,32 +360,6 @@ function Scores() {
               選擇賽事
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {selectedTournament && (
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<DownloadIcon />}
-                    onClick={handleExportScores}
-                    disabled={scores.length === 0}
-                  >
-                    匯出成績表
-                  </Button>
-                  <Button
-                    variant="contained"
-                    onClick={() => setOpenUploadDialog(true)}
-                  >
-                    匯入成績
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    onClick={handleClearScores}
-                  >
-                    清除所有成績
-                  </Button>
-                </Box>
-              )}
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {tournaments.map((tournament) => (
                   <Button
@@ -396,6 +370,32 @@ function Scores() {
                     {tournament.name}
                   </Button>
                 ))}
+                {selectedTournament && (
+                  <>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<DownloadIcon />}
+                      onClick={handleExportScores}
+                      disabled={scores.length === 0}
+                    >
+                      匯出成績表
+                    </Button>
+                    <Button
+                      variant="contained"
+                      onClick={() => setOpenUploadDialog(true)}
+                    >
+                      匯入成績
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={handleClearScores}
+                    >
+                      清除所有成績
+                    </Button>
+                  </>
+                )}
               </Box>
             </Box>
           </Box>
