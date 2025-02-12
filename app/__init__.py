@@ -154,14 +154,12 @@ def create_app(config_class=Config):
                         {
                             'name': 'Eagle獎',
                             'description': 'Eagle成就',
-                            'has_hole_number': True,
                             'max_winners': None,
                             'is_active': True
                         },
                         {
                             'name': 'HIO',
                             'description': '一桿進洞',
-                            'has_hole_number': True,
                             'max_winners': 1,
                             'is_active': True
                         },
