@@ -1,4 +1,4 @@
-import axios from '../axios';
+import axios from '../utils/axios';
 
 // 獲取賽事獎項
 export const getTournamentAwards = async (tournamentId) => {
