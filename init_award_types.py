@@ -1,9 +1,8 @@
 from app import create_app
 from app.models import db, AwardType
 
-app = create_app()
-
 def init_award_types():
+    app = create_app()
     with app.app_context():
         # 檢查是否已有獎項類型
         if AwardType.query.first():
@@ -17,46 +16,53 @@ def init_award_types():
                 'description': '總桿數最少者',
                 'has_score': True,
                 'has_rank': True,
-                'max_winners': 1
+                'max_winners': 1,
+                'is_active': True
             },
             {
                 'name': '淨桿冠軍',
                 'description': '淨桿數最少者',
                 'has_score': True,
                 'has_rank': True,
-                'max_winners': 1
+                'max_winners': 1,
+                'is_active': True
             },
             {
                 'name': '淨桿亞軍',
                 'description': '淨桿數第二少者',
                 'has_score': True,
                 'has_rank': True,
-                'max_winners': 1
+                'max_winners': 1,
+                'is_active': True
             },
             {
                 'name': '淨桿季軍',
                 'description': '淨桿數第三少者',
                 'has_score': True,
                 'has_rank': True,
-                'max_winners': 1
+                'max_winners': 1,
+                'is_active': True
             },
             {
                 'name': '一桿進洞',
                 'description': '一桿進洞者',
                 'has_hole_number': True,
-                'max_winners': None
+                'max_winners': None,
+                'is_active': True
             },
             {
                 'name': '最近洞獎',
                 'description': '最接近洞口者',
                 'has_hole_number': True,
-                'max_winners': None
+                'max_winners': None,
+                'is_active': True
             },
             {
                 'name': '最遠洞獎',
                 'description': '最遠距離進洞者',
                 'has_hole_number': True,
-                'max_winners': None
+                'max_winners': None,
+                'is_active': True
             }
         ]
 
