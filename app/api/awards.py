@@ -136,12 +136,29 @@ def get_tournament_awards():
         if not tournament_id:
             return jsonify({'error': '必須提供賽事ID'}), 400
             
+        logger.info(f'獲取賽事 {tournament_id} 的獎項')
         awards = TournamentAward.query.filter_by(tournament_id=tournament_id).all()
-        return jsonify([a.to_dict() for a in awards])
+        logger.info(f'找到 {len(awards)} 個獎項')
+        
+        result = []
+        for award in awards:
+            try:
+                award_dict = award.to_dict()
+                result.append(award_dict)
+            except Exception as e:
+                logger.error(f'轉換獎項 {award.id} 為字典時發生錯誤: {str(e)}')
+                logger.error(traceback.format_exc())
+                continue
+        
+        return jsonify(result)
     except Exception as e:
         logger.error(f"獲取賽事獎項時發生錯誤: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': '獲取賽事獎項失敗',
+            'message': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
 
 @bp.route('/', methods=['POST'])
 def create_tournament_award():
