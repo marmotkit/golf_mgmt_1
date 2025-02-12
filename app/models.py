@@ -278,3 +278,67 @@ class GamePrize(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+class TournamentAward(db.Model):
+    """賽事獎項"""
+    __tablename__ = 'tournament_awards'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournament.id'), nullable=False)
+    award_type = db.Column(db.String(50), nullable=False)  # 獎項類型
+    category = db.Column(db.String(50))  # 組別（如：一般組、長青組）
+    winner_name = db.Column(db.String(100), nullable=False)  # 得獎者姓名
+    score = db.Column(db.Integer)  # 成績（如總桿數）
+    rank = db.Column(db.Integer)  # 名次（如淨桿第幾名）
+    hole_number = db.Column(db.Integer)  # 洞號（如 HIO 發生在第幾洞）
+    description = db.Column(db.Text)  # 獎項描述
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    tournament = db.relationship('Tournament', backref=db.backref('awards', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'tournament_id': self.tournament_id,
+            'award_type': self.award_type,
+            'category': self.category,
+            'winner_name': self.winner_name,
+            'score': self.score,
+            'rank': self.rank,
+            'hole_number': self.hole_number,
+            'description': self.description,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+class AwardType(db.Model):
+    """獎項類型定義"""
+    __tablename__ = 'award_types'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), nullable=False, unique=True)  # 獎項名稱
+    description = db.Column(db.Text)  # 獎項說明
+    has_category = db.Column(db.Boolean, default=False)  # 是否有分組
+    has_score = db.Column(db.Boolean, default=False)  # 是否需要記錄分數
+    has_rank = db.Column(db.Boolean, default=False)  # 是否需要記錄名次
+    has_hole_number = db.Column(db.Boolean, default=False)  # 是否需要記錄洞號
+    max_winners = db.Column(db.Integer)  # 最多得獎人數（null 表示不限）
+    is_active = db.Column(db.Boolean, default=True)  # 是否啟用
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'has_category': self.has_category,
+            'has_score': self.has_score,
+            'has_rank': self.has_rank,
+            'has_hole_number': self.has_hole_number,
+            'max_winners': self.max_winners,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }

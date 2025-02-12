@@ -92,7 +92,7 @@ def create_app(config_class=Config):
 
     # 註冊 API 藍圖
     try:
-        from app.api import members, tournaments, scores, games, reports, dashboard, version
+        from app.api import members, tournaments, scores, games, reports, dashboard, version, awards
         app.register_blueprint(members.bp, url_prefix='/api/members')  
         app.register_blueprint(tournaments.bp, url_prefix='/api/tournaments')  
         app.register_blueprint(scores.bp, url_prefix='/api/scores')  
@@ -100,6 +100,7 @@ def create_app(config_class=Config):
         app.register_blueprint(reports.bp, url_prefix='/api/reports')  
         app.register_blueprint(dashboard.bp, url_prefix='/api/dashboard')  
         app.register_blueprint(version.bp, url_prefix='/api/version')  
+        app.register_blueprint(awards.bp, url_prefix='/api/awards')  
         logger.info('All blueprints registered')
     except Exception as e:
         logger.error(f'Error registering blueprints: {str(e)}')
