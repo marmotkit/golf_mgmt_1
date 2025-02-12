@@ -83,15 +83,84 @@ def create_app(config_class=Config):
         migrate.init_app(app, db)
         logger.info('Database initialized')
         
-        # 確保所有表都存在
+        # 確保所有表都存在並執行遷移
         with app.app_context():
-            logger.info('Checking database tables...')
+            logger.info('Checking database tables and running migrations...')
             try:
-                db.create_all()
-                logger.info('All tables created successfully')
+                from flask_migrate import upgrade
+                upgrade()
+                logger.info('Database migrations completed successfully')
+                
+                # 檢查獎項類型表是否為空
+                from app.models import AwardType
+                if not AwardType.query.first():
+                    logger.info('Initializing award types...')
+                    default_types = [
+                        {
+                            'name': '總桿冠軍',
+                            'description': '總桿數最少者',
+                            'has_score': True,
+                            'has_rank': True,
+                            'max_winners': 1,
+                            'is_active': True
+                        },
+                        {
+                            'name': '淨桿冠軍',
+                            'description': '淨桿數最少者',
+                            'has_score': True,
+                            'has_rank': True,
+                            'max_winners': 1,
+                            'is_active': True
+                        },
+                        {
+                            'name': '淨桿亞軍',
+                            'description': '淨桿數第二少者',
+                            'has_score': True,
+                            'has_rank': True,
+                            'max_winners': 1,
+                            'is_active': True
+                        },
+                        {
+                            'name': '淨桿季軍',
+                            'description': '淨桿數第三少者',
+                            'has_score': True,
+                            'has_rank': True,
+                            'max_winners': 1,
+                            'is_active': True
+                        },
+                        {
+                            'name': '一桿進洞',
+                            'description': '一桿進洞者',
+                            'has_hole_number': True,
+                            'max_winners': None,
+                            'is_active': True
+                        },
+                        {
+                            'name': '最近洞獎',
+                            'description': '最接近洞口者',
+                            'has_hole_number': True,
+                            'max_winners': None,
+                            'is_active': True
+                        },
+                        {
+                            'name': '最遠洞獎',
+                            'description': '最遠距離進洞者',
+                            'has_hole_number': True,
+                            'max_winners': None,
+                            'is_active': True
+                        }
+                    ]
+                    
+                    for type_data in default_types:
+                        award_type = AwardType(**type_data)
+                        db.session.add(award_type)
+                    
+                    db.session.commit()
+                    logger.info('Award types initialized successfully')
             except Exception as e:
-                logger.error(f'Error creating tables: {str(e)}')
+                logger.error(f'Error in database setup: {str(e)}')
                 logger.error(traceback.format_exc())
+                raise
         
         # 檢查資料庫連接
         if not check_database_connection(app):
