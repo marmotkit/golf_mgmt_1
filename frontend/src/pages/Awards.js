@@ -28,6 +28,7 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import * as awardService from '../services/awardService';
 import * as tournamentService from '../services/tournamentService';
+import config from '../config';
 
 const Awards = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -88,7 +89,7 @@ const Awards = () => {
   useEffect(() => {
     const fetchAwardTypes = async () => {
       try {
-        const response = await fetch('/api/awards/types');
+        const response = await fetch(`${config.apiBaseUrl}/awards/types`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -103,7 +104,7 @@ const Awards = () => {
     const fetchAwards = async () => {
       if (!selectedTournament) return;
       try {
-        const response = await fetch(`/api/awards?tournament_id=${selectedTournament}`);
+        const response = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -164,7 +165,7 @@ const Awards = () => {
     if (window.confirm('確定要刪除這個獎項嗎？')) {
       try {
         await awardService.deleteTournamentAward(id);
-        const response = await fetch(`/api/awards?tournament_id=${selectedTournament}`);
+        const response = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -191,7 +192,7 @@ const Awards = () => {
       }
 
       setModalVisible(false);
-      const response = await fetch(`/api/awards?tournament_id=${selectedTournament}`);
+      const response = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
