@@ -22,11 +22,12 @@ import {
   IconButton,
   Grid,
   Divider,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import * as awardService from '../services/awardService';
 import * as tournamentService from '../services/tournamentService';
-import { message } from 'antd';
 
 const Awards = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -46,6 +47,11 @@ const Awards = () => {
     hole_number: '',
     description: ''
   });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
 
   // 初始化數據
   useEffect(() => {
@@ -64,9 +70,22 @@ const Awards = () => {
     fetchInitialData();
   }, []);
 
+  // 顯示提示信息
+  const showMessage = (message, severity = 'success') => {
+    setSnackbar({
+      open: true,
+      message,
+      severity
+    });
+  };
+
+  // 關閉提示信息
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
   // 加載賽事獎項
   useEffect(() => {
-    // 獲取獎項類型
     const fetchAwardTypes = async () => {
       try {
         const response = await fetch('/api/awards/types');
@@ -77,11 +96,10 @@ const Awards = () => {
         setAwardTypes(data);
       } catch (error) {
         console.error('獲取獎項類型失敗:', error);
-        message.error('獲取獎項類型失敗');
+        showMessage('獲取獎項類型失敗', 'error');
       }
     };
 
-    // 獲取獎項列表
     const fetchAwards = async () => {
       if (!selectedTournament) return;
       try {
@@ -93,7 +111,7 @@ const Awards = () => {
         setAwards(data);
       } catch (error) {
         console.error('獲取獎項列表失敗:', error);
-        message.error('獲取獎項列表失敗');
+        showMessage('獲取獎項列表失敗', 'error');
       }
     };
 
@@ -345,6 +363,17 @@ const Awards = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
