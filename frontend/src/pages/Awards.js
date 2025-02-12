@@ -164,9 +164,15 @@ const Awards = () => {
     if (window.confirm('確定要刪除這個獎項嗎？')) {
       try {
         await awardService.deleteTournamentAward(id);
-        loadAwards();
+        const response = await fetch(`/api/awards?tournament_id=${selectedTournament}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setAwards(data);
       } catch (error) {
         console.error('刪除失敗：', error);
+        showMessage('刪除失敗', 'error');
       }
     }
   };
@@ -185,9 +191,16 @@ const Awards = () => {
       }
 
       setModalVisible(false);
-      loadAwards();
+      const response = await fetch(`/api/awards?tournament_id=${selectedTournament}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setAwards(data);
+      showMessage(modalMode === 'add' ? '新增成功' : '更新成功', 'success');
     } catch (error) {
       console.error(modalMode === 'add' ? '新增失敗：' : '更新失敗：', error);
+      showMessage(modalMode === 'add' ? '新增失敗' : '更新失敗', 'error');
     }
   };
 
