@@ -53,18 +53,14 @@ def create_app(config_class=Config):
     @app.after_request
     def add_cors_headers(response):
         if request.method == "OPTIONS":
-            # 處理預檢請求
             response = app.make_default_options_response()
         
-        # 檢查是否來自允許的域名
         if request.headers.get("Origin") == "https://golf-mgmt-1-frontend.onrender.com":
-            # 刪除可能存在的舊頭部
             response.headers.pop("Access-Control-Allow-Origin", None)
             response.headers.pop("Access-Control-Allow-Methods", None)
             response.headers.pop("Access-Control-Allow-Headers", None)
             response.headers.pop("Access-Control-Allow-Credentials", None)
             
-            # 添加新的頭部
             response.headers.set("Access-Control-Allow-Origin", "https://golf-mgmt-1-frontend.onrender.com")
             response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
             response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
@@ -87,11 +83,19 @@ def create_app(config_class=Config):
         with app.app_context():
             logger.info('Checking database tables and running migrations...')
             try:
-                from flask_migrate import upgrade
-                upgrade()
-                logger.info('Database migrations completed successfully')
+                # 檢查表是否存在
+                inspector = inspect(db.engine)
+                tables = inspector.get_table_names()
+                logger.info(f'Existing tables: {tables}')
                 
-                # 檢查獎項類型表是否為空
+                # 如果 award_types 表不存在，創建它
+                if 'award_types' not in tables:
+                    logger.info('Creating award_types table...')
+                    from app.models import AwardType
+                    AwardType.__table__.create(db.engine)
+                    logger.info('award_types table created successfully')
+                
+                # 初始化獎項類型
                 from app.models import AwardType
                 if not AwardType.query.first():
                     logger.info('Initializing award types...')
@@ -160,15 +164,18 @@ def create_app(config_class=Config):
             except Exception as e:
                 logger.error(f'Error in database setup: {str(e)}')
                 logger.error(traceback.format_exc())
-                raise
-        
-        # 檢查資料庫連接
-        if not check_database_connection(app):
-            raise Exception("Database connection check failed")
+                db.session.rollback()
+                # 不要在這裡 raise，讓應用繼續運行
+            
+            # 檢查資料庫連接
+            if not check_database_connection(app):
+                logger.error("Database connection check failed")
+                # 不要在這裡 raise，讓應用繼續運行
             
     except Exception as e:
         logger.error(f'Error initializing database: {str(e)}')
-        raise
+        logger.error(traceback.format_exc())
+        # 不要在這裡 raise，讓應用繼續運行
 
     # 註冊 API 藍圖
     try:
@@ -184,7 +191,8 @@ def create_app(config_class=Config):
         logger.info('All blueprints registered')
     except Exception as e:
         logger.error(f'Error registering blueprints: {str(e)}')
-        raise
+        logger.error(traceback.format_exc())
+        # 不要在這裡 raise，讓應用繼續運行
 
     @app.route('/health')
     def health_check():
