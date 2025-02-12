@@ -101,55 +101,63 @@ def create_app(config_class=Config):
                     logger.info('Initializing award types...')
                     default_types = [
                         {
+                            'name': '技術獎-一般組',
+                            'description': '最接近洞口者（一般組）',
+                            'has_hole_number': True,
+                            'max_winners': 3,
+                            'is_active': True
+                        },
+                        {
+                            'name': '技術獎-長青組',
+                            'description': '最接近洞口者（長青組）',
+                            'has_hole_number': True,
+                            'max_winners': 1,
+                            'is_active': True
+                        },
+                        {
                             'name': '總桿冠軍',
                             'description': '總桿數最少者',
                             'has_score': True,
-                            'has_rank': True,
                             'max_winners': 1,
                             'is_active': True
                         },
                         {
-                            'name': '淨桿冠軍',
-                            'description': '淨桿數最少者',
+                            'name': '淨桿獎',
+                            'description': '淨桿成績',
                             'has_score': True,
                             'has_rank': True,
+                            'max_winners': 10,
+                            'is_active': True
+                        },
+                        {
+                            'name': '會長獎',
+                            'description': '會長特別獎',
                             'max_winners': 1,
                             'is_active': True
                         },
                         {
-                            'name': '淨桿亞軍',
-                            'description': '淨桿數第二少者',
-                            'has_score': True,
-                            'has_rank': True,
+                            'name': 'BB獎',
+                            'description': '特殊表現獎',
                             'max_winners': 1,
                             'is_active': True
                         },
                         {
-                            'name': '淨桿季軍',
-                            'description': '淨桿數第三少者',
-                            'has_score': True,
-                            'has_rank': True,
-                            'max_winners': 1,
-                            'is_active': True
-                        },
-                        {
-                            'name': '一桿進洞',
-                            'description': '一桿進洞者',
+                            'name': 'Eagle獎',
+                            'description': 'Eagle成就',
                             'has_hole_number': True,
                             'max_winners': None,
                             'is_active': True
                         },
                         {
-                            'name': '最近洞獎',
-                            'description': '最接近洞口者',
+                            'name': 'HIO',
+                            'description': '一桿進洞',
                             'has_hole_number': True,
-                            'max_winners': None,
+                            'max_winners': 1,
                             'is_active': True
                         },
                         {
-                            'name': '最遠洞獎',
-                            'description': '最遠距離進洞者',
-                            'has_hole_number': True,
+                            'name': '其他',
+                            'description': '臨時增加的特殊獎項',
                             'max_winners': None,
                             'is_active': True
                         }
