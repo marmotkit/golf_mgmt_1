@@ -1,33 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Button,
+  Paper,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  Select,
-  MenuItem,
-  TextField,
+  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Typography,
-  IconButton,
-  Grid,
-  Divider,
+  TextField,
   Snackbar,
-  Alert
+  Alert,
+  CircularProgress
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
-import * as awardService from '../services/awardService';
-import * as tournamentService from '../services/tournamentService';
+import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import config from '../config';
 
 const Awards = () => {
@@ -36,40 +33,21 @@ const Awards = () => {
   const [awards, setAwards] = useState([]);
   const [awardTypes, setAwardTypes] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalMode, setModalMode] = useState('add');
-  const [currentEditId, setCurrentEditId] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingAward, setEditingAward] = useState(null);
   const [formData, setFormData] = useState({
-    award_type: '',
-    winner_name: '',
-    category: '',
+    award_type_id: '',
+    chinese_name: '',
     score: '',
     rank: '',
     hole_number: '',
-    description: ''
+    remarks: ''
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
-
-  // 初始化數據
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        const [tournamentsData, typesData] = await Promise.all([
-          tournamentService.getAllTournaments(),
-          awardService.getAwardTypes()
-        ]);
-        setTournaments(tournamentsData);
-        setAwardTypes(typesData);
-      } catch (error) {
-        console.error('初始化數據失敗：', error);
-      }
-    };
-    fetchInitialData();
-  }, []);
 
   // 顯示提示信息
   const showMessage = (message, severity = 'success') => {
@@ -80,19 +58,29 @@ const Awards = () => {
     });
   };
 
-  // 關閉提示信息
-  const handleSnackbarClose = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
-  };
+  // 加載賽事列表
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        const response = await fetch(`${config.apiBaseUrl}/tournaments`);
+        if (!response.ok) throw new Error('獲取賽事列表失敗');
+        const data = await response.json();
+        setTournaments(data);
+      } catch (error) {
+        console.error('獲取賽事列表失敗:', error);
+        showMessage('獲取賽事列表失敗', 'error');
+      }
+    };
 
-  // 加載賽事獎項
+    fetchTournaments();
+  }, []);
+
+  // 加載獎項類型
   useEffect(() => {
     const fetchAwardTypes = async () => {
       try {
         const response = await fetch(`${config.apiBaseUrl}/awards/types`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error('獲取獎項類型失敗');
         const data = await response.json();
         setAwardTypes(data);
       } catch (error) {
@@ -101,27 +89,132 @@ const Awards = () => {
       }
     };
 
+    fetchAwardTypes();
+  }, []);
+
+  // 加載賽事獎項
+  useEffect(() => {
     const fetchAwards = async () => {
       if (!selectedTournament) return;
+      setLoading(true);
       try {
         const response = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        if (!response.ok) throw new Error('獲取獎項列表失敗');
         const data = await response.json();
         setAwards(data);
       } catch (error) {
         console.error('獲取獎項列表失敗:', error);
         showMessage('獲取獎項列表失敗', 'error');
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchAwardTypes();
     fetchAwards();
   }, [selectedTournament]);
 
   const handleTournamentChange = (event) => {
     setSelectedTournament(event.target.value);
+  };
+
+  const handleAddClick = () => {
+    setEditingAward(null);
+    setFormData({
+      award_type_id: '',
+      chinese_name: '',
+      score: '',
+      rank: '',
+      hole_number: '',
+      remarks: ''
+    });
+    setDialogOpen(true);
+  };
+
+  const handleEditClick = (award) => {
+    setEditingAward(award);
+    setFormData({
+      award_type_id: award.award_type_id,
+      chinese_name: award.chinese_name || '',
+      score: award.score || '',
+      rank: award.rank || '',
+      hole_number: award.hole_number || '',
+      remarks: award.remarks || ''
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDeleteClick = async (id) => {
+    if (!window.confirm('確定要刪除這個獎項嗎？')) return;
+    
+    try {
+      const response = await fetch(`${config.apiBaseUrl}/awards/${id}`, {
+        method: 'DELETE'
+      });
+      if (!response.ok) throw new Error('刪除獎項失敗');
+      
+      setAwards(awards.filter(award => award.id !== id));
+      showMessage('刪除成功');
+    } catch (error) {
+      console.error('刪除獎項失敗:', error);
+      showMessage('刪除獎項失敗', 'error');
+    }
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+    setEditingAward(null);
+    setFormData({
+      award_type_id: '',
+      chinese_name: '',
+      score: '',
+      rank: '',
+      hole_number: '',
+      remarks: ''
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.award_type_id || !formData.chinese_name) {
+      showMessage('請填寫必要欄位', 'error');
+      return;
+    }
+
+    const submitData = {
+      ...formData,
+      tournament_id: selectedTournament
+    };
+
+    try {
+      const url = editingAward
+        ? `${config.apiBaseUrl}/awards/${editingAward.id}`
+        : `${config.apiBaseUrl}/awards`;
+      
+      const response = await fetch(url, {
+        method: editingAward ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(submitData)
+      });
+
+      if (!response.ok) throw new Error(editingAward ? '更新獎項失敗' : '新增獎項失敗');
+
+      const data = await response.json();
+      
+      if (editingAward) {
+        setAwards(awards.map(award => 
+          award.id === editingAward.id ? data : award
+        ));
+      } else {
+        setAwards([...awards, data]);
+      }
+
+      handleDialogClose();
+      showMessage(editingAward ? '更新成功' : '新增成功');
+    } catch (error) {
+      console.error(editingAward ? '更新獎項失敗:' : '新增獎項失敗:', error);
+      showMessage(editingAward ? '更新獎項失敗' : '新增獎項失敗', 'error');
+    }
   };
 
   const handleInputChange = (event) => {
@@ -132,90 +225,13 @@ const Awards = () => {
     }));
   };
 
-  const handleAdd = (awardType) => {
-    setModalMode('add');
-    setFormData({
-      award_type: awardType.id,
-      winner_name: '',
-      category: '',
-      score: '',
-      rank: '',
-      hole_number: '',
-      description: ''
-    });
-    setModalVisible(true);
-  };
-
-  const handleEdit = (award) => {
-    setModalMode('edit');
-    setCurrentEditId(award.id);
-    setFormData({
-      award_type: award.award_type,
-      winner_name: award.winner_name,
-      category: award.category || '',
-      score: award.score || '',
-      rank: award.rank || '',
-      hole_number: award.hole_number || '',
-      description: award.description || ''
-    });
-    setModalVisible(true);
-  };
-
-  const handleDelete = async (id) => {
-    if (window.confirm('確定要刪除這個獎項嗎？')) {
-      try {
-        await awardService.deleteTournamentAward(id);
-        const response = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setAwards(data);
-      } catch (error) {
-        console.error('刪除失敗：', error);
-        showMessage('刪除失敗', 'error');
-      }
-    }
-  };
-
-  const handleSubmit = async () => {
-    try {
-      const awardData = {
-        tournament_id: selectedTournament,
-        ...formData
-      };
-
-      if (modalMode === 'add') {
-        await awardService.createTournamentAward(awardData);
-      } else {
-        await awardService.updateTournamentAward(currentEditId, awardData);
-      }
-
-      setModalVisible(false);
-      const response = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setAwards(data);
-      showMessage(modalMode === 'add' ? '新增成功' : '更新成功', 'success');
-    } catch (error) {
-      console.error(modalMode === 'add' ? '新增失敗：' : '更新失敗：', error);
-      showMessage(modalMode === 'add' ? '新增失敗' : '更新失敗', 'error');
-    }
-  };
-
-  // 根據獎項類型分組顯示獎項
-  const groupedAwards = awards.reduce((acc, award) => {
-    const type = awardTypes.find(t => t.id === award.award_type);
-    if (!type) return acc;
-    
-    if (!acc[type.name]) {
-      acc[type.name] = [];
-    }
-    acc[type.name].push(award);
-    return acc;
-  }, {});
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -241,129 +257,130 @@ const Awards = () => {
       </Box>
 
       {selectedTournament && (
-        <Grid container spacing={3}>
-          {awardTypes.map((type) => (
-            <Grid item xs={12} key={type.id}>
-              <Paper sx={{ p: 2, mb: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6">{type.name}</Typography>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleAdd(type)}
-                  >
-                    新增
-                  </Button>
-                </Box>
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>得獎者</TableCell>
-                        {type.has_category && <TableCell>組別</TableCell>}
-                        {type.has_score && <TableCell>分數</TableCell>}
-                        {type.has_rank && <TableCell>名次</TableCell>}
-                        {type.has_hole_number && <TableCell>洞號</TableCell>}
-                        <TableCell>備註</TableCell>
-                        <TableCell>操作</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {(groupedAwards[type.name] || []).map((award) => (
-                        <TableRow key={award.id}>
-                          <TableCell>{award.winner_name}</TableCell>
-                          {type.has_category && <TableCell>{award.category}</TableCell>}
-                          {type.has_score && <TableCell>{award.score}</TableCell>}
-                          {type.has_rank && <TableCell>{award.rank}</TableCell>}
-                          {type.has_hole_number && <TableCell>{award.hole_number}</TableCell>}
-                          <TableCell>{award.description}</TableCell>
-                          <TableCell>
-                            <IconButton size="small" onClick={() => handleEdit(award)}>
-                              <EditIcon />
-                            </IconButton>
-                            <IconButton size="small" color="error" onClick={() => handleDelete(award.id)}>
-                              <DeleteIcon />
-                            </IconButton>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+        <Paper sx={{ mt: 3 }}>
+          <Box sx={{ p: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={handleAddClick}
+            >
+              新增獎項
+            </Button>
+          </Box>
+
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>獎項類型</TableCell>
+                  <TableCell>得獎者</TableCell>
+                  <TableCell>分數</TableCell>
+                  <TableCell>名次</TableCell>
+                  <TableCell>洞號</TableCell>
+                  <TableCell>備註</TableCell>
+                  <TableCell>操作</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {awards.map((award) => (
+                  <TableRow key={award.id}>
+                    <TableCell>
+                      {awardTypes.find(t => t.id === award.award_type_id)?.name || '未知'}
+                    </TableCell>
+                    <TableCell>{award.chinese_name}</TableCell>
+                    <TableCell>{award.score}</TableCell>
+                    <TableCell>{award.rank}</TableCell>
+                    <TableCell>{award.hole_number}</TableCell>
+                    <TableCell>{award.remarks}</TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditClick(award)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteClick(award.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
       )}
 
-      <Dialog open={modalVisible} onClose={() => setModalVisible(false)}>
+      <Dialog open={dialogOpen} onClose={handleDialogClose}>
         <DialogTitle>
-          {modalMode === 'add' ? '新增獎項' : '編輯獎項'}
+          {editingAward ? '編輯獎項' : '新增獎項'}
         </DialogTitle>
         <DialogContent>
           <Box sx={{ pt: 2 }}>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>獎項類型</InputLabel>
+              <Select
+                name="award_type_id"
+                value={formData.award_type_id}
+                onChange={handleInputChange}
+                label="獎項類型"
+              >
+                {awardTypes.map((type) => (
+                  <MenuItem key={type.id} value={type.id}>
+                    {type.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <TextField
               fullWidth
               label="得獎者"
-              name="winner_name"
-              value={formData.winner_name}
+              name="chinese_name"
+              value={formData.chinese_name}
               onChange={handleInputChange}
               sx={{ mb: 2 }}
             />
 
-            {awardTypes.find(t => t.id === formData.award_type)?.has_category && (
-              <TextField
-                fullWidth
-                label="組別"
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                sx={{ mb: 2 }}
-              />
-            )}
+            <TextField
+              fullWidth
+              label="分數"
+              name="score"
+              type="number"
+              value={formData.score}
+              onChange={handleInputChange}
+              sx={{ mb: 2 }}
+            />
 
-            {awardTypes.find(t => t.id === formData.award_type)?.has_score && (
-              <TextField
-                fullWidth
-                label="分數"
-                name="score"
-                type="number"
-                value={formData.score}
-                onChange={handleInputChange}
-                sx={{ mb: 2 }}
-              />
-            )}
+            <TextField
+              fullWidth
+              label="名次"
+              name="rank"
+              type="number"
+              value={formData.rank}
+              onChange={handleInputChange}
+              sx={{ mb: 2 }}
+            />
 
-            {awardTypes.find(t => t.id === formData.award_type)?.has_rank && (
-              <TextField
-                fullWidth
-                label="名次"
-                name="rank"
-                type="number"
-                value={formData.rank}
-                onChange={handleInputChange}
-                sx={{ mb: 2 }}
-              />
-            )}
-
-            {awardTypes.find(t => t.id === formData.award_type)?.has_hole_number && (
-              <TextField
-                fullWidth
-                label="洞號"
-                name="hole_number"
-                type="number"
-                value={formData.hole_number}
-                onChange={handleInputChange}
-                sx={{ mb: 2 }}
-              />
-            )}
+            <TextField
+              fullWidth
+              label="洞號"
+              name="hole_number"
+              type="number"
+              value={formData.hole_number}
+              onChange={handleInputChange}
+              sx={{ mb: 2 }}
+            />
 
             <TextField
               fullWidth
               label="備註"
-              name="description"
-              value={formData.description}
+              name="remarks"
+              value={formData.remarks}
               onChange={handleInputChange}
               multiline
               rows={4}
@@ -371,8 +388,8 @@ const Awards = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setModalVisible(false)}>取消</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
+          <Button onClick={handleDialogClose}>取消</Button>
+          <Button onClick={handleSubmit} variant="contained">
             確定
           </Button>
         </DialogActions>
@@ -381,10 +398,13 @@ const Awards = () => {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
-        onClose={handleSnackbarClose}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert onClose={handleSnackbarClose} severity={snackbar.severity}>
+        <Alert
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+          severity={snackbar.severity}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
