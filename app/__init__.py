@@ -5,6 +5,7 @@ from config import Config
 import logging
 import sys
 from sqlalchemy import text, inspect
+import traceback
 
 # 配置日誌
 logging.basicConfig(
@@ -81,6 +82,16 @@ def create_app(config_class=Config):
         db.init_app(app)
         migrate.init_app(app, db)
         logger.info('Database initialized')
+        
+        # 確保所有表都存在
+        with app.app_context():
+            logger.info('Checking database tables...')
+            try:
+                db.create_all()
+                logger.info('All tables created successfully')
+            except Exception as e:
+                logger.error(f'Error creating tables: {str(e)}')
+                logger.error(traceback.format_exc())
         
         # 檢查資料庫連接
         if not check_database_connection(app):
