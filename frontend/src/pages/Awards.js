@@ -35,7 +35,7 @@ const Awards = () => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentAwardType, setCurrentAwardType] = useState(null);
-  const [winnerInputs, setWinnerInputs] = useState({});  // 每個獎項類型的輸入狀態
+  const [winnerInputs, setWinnerInputs] = useState({});
   const [netScoreWinners, setNetScoreWinners] = useState(Array(10).fill(''));
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -114,7 +114,7 @@ const Awards = () => {
     setSelectedTournament(event.target.value);
   };
 
-  const handleAddWinner = async (awardTypeId, rank = null) => {
+  const handleAddWinner = async (awardTypeId) => {
     const winnerName = winnerInputs[awardTypeId];
     if (!winnerName?.trim()) {
       showMessage('請輸入得獎者姓名', 'error');
@@ -130,8 +130,7 @@ const Awards = () => {
         body: JSON.stringify({
           tournament_id: selectedTournament,
           award_type_id: awardTypeId,
-          chinese_name: winnerName.trim(),
-          rank: rank
+          chinese_name: winnerName.trim()
         })
       });
 
@@ -216,11 +215,14 @@ const Awards = () => {
                     size="small"
                     placeholder="輸入得獎者姓名"
                     value={winnerInputs[type.id] || ''}
-                    onChange={(e) => setWinnerInputs(prev => ({
-                      ...prev,
-                      [type.id]: e.target.value
-                    }))}
-                    sx={{ mr: 1 }}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setWinnerInputs(prev => ({
+                        ...prev,
+                        [type.id]: newValue
+                      }));
+                    }}
+                    sx={{ mr: 1, minWidth: '200px' }}
                   />
                   <Button
                     variant="contained"
@@ -237,7 +239,6 @@ const Awards = () => {
                       <ListItem key={award.id}>
                         <ListItemText 
                           primary={award.chinese_name}
-                          secondary={award.rank ? `第${award.rank}名` : null}
                         />
                         <ListItemSecondaryAction>
                           <IconButton
