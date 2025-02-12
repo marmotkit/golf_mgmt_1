@@ -35,7 +35,7 @@ const Awards = () => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [currentAwardType, setCurrentAwardType] = useState(null);
-  const [winnerName, setWinnerName] = useState('');
+  const [winnerInputs, setWinnerInputs] = useState({});  // 每個獎項類型的輸入狀態
   const [netScoreWinners, setNetScoreWinners] = useState(Array(10).fill(''));
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -67,6 +67,13 @@ const Awards = () => {
         if (!response.ok) throw new Error('獲取獎項類型失敗');
         const data = await response.json();
         setAwardTypes(data);
+        
+        // 初始化每個獎項類型的輸入狀態
+        const inputs = {};
+        data.forEach(type => {
+          inputs[type.id] = '';
+        });
+        setWinnerInputs(inputs);
       } catch (error) {
         showMessage('獲取獎項類型失敗', 'error');
       }
@@ -107,8 +114,9 @@ const Awards = () => {
     setSelectedTournament(event.target.value);
   };
 
-  const handleAddWinner = async (awardTypeId, name, rank = null) => {
-    if (!name.trim()) {
+  const handleAddWinner = async (awardTypeId, rank = null) => {
+    const winnerName = winnerInputs[awardTypeId];
+    if (!winnerName?.trim()) {
       showMessage('請輸入得獎者姓名', 'error');
       return;
     }
@@ -122,7 +130,7 @@ const Awards = () => {
         body: JSON.stringify({
           tournament_id: selectedTournament,
           award_type_id: awardTypeId,
-          chinese_name: name.trim(),
+          chinese_name: winnerName.trim(),
           rank: rank
         })
       });
@@ -135,8 +143,11 @@ const Awards = () => {
       const data = await awardsResponse.json();
       setAwards(data);
       
-      setWinnerName('');
-      setDialogOpen(false);
+      // 清空對應獎項的輸入
+      setWinnerInputs(prev => ({
+        ...prev,
+        [awardTypeId]: ''
+      }));
       showMessage('新增成功');
     } catch (error) {
       showMessage(error.message, 'error');
@@ -179,7 +190,7 @@ const Awards = () => {
     try {
       await Promise.all(
         validWinners.map((name, index) => 
-          handleAddWinner(netScoreType.id, name, index + 1)
+          handleAddWinner(netScoreType.id, index + 1)
         )
       );
       setNetScoreWinners(Array(10).fill(''));
@@ -204,14 +215,17 @@ const Awards = () => {
                   <TextField
                     size="small"
                     placeholder="輸入得獎者姓名"
-                    value={winnerName}
-                    onChange={(e) => setWinnerName(e.target.value)}
+                    value={winnerInputs[type.id] || ''}
+                    onChange={(e) => setWinnerInputs(prev => ({
+                      ...prev,
+                      [type.id]: e.target.value
+                    }))}
                     sx={{ mr: 1 }}
                   />
                   <Button
                     variant="contained"
-                    onClick={() => handleAddWinner(type.id, winnerName)}
-                    disabled={!winnerName.trim()}
+                    onClick={() => handleAddWinner(type.id)}
+                    disabled={!winnerInputs[type.id]?.trim()}
                   >
                     新增
                   </Button>
