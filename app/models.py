@@ -315,7 +315,7 @@ class TournamentAward(db.Model):
     award_type_id = db.Column(db.Integer, db.ForeignKey('award_types.id'), nullable=False)
     member_number = db.Column(db.String(32))
     chinese_name = db.Column(db.String(64))
-    score = db.Column(db.Integer)
+    score = db.Column(db.Float)
     rank = db.Column(db.Integer)
     hole_number = db.Column(db.Integer)
     remarks = db.Column(db.Text)
@@ -332,7 +332,7 @@ class TournamentAward(db.Model):
             'award_type_id': self.award_type_id,
             'member_number': self.member_number,
             'chinese_name': self.chinese_name,
-            'score': self.score,
+            'score': float(self.score) if self.score is not None else None,
             'rank': self.rank,
             'hole_number': self.hole_number,
             'remarks': self.remarks,
