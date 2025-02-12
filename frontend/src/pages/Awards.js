@@ -26,6 +26,7 @@ import {
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
 import * as awardService from '../services/awardService';
 import * as tournamentService from '../services/tournamentService';
+import { message } from 'antd';
 
 const Awards = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -64,21 +65,40 @@ const Awards = () => {
   }, []);
 
   // 加載賽事獎項
-  const loadAwards = async () => {
-    if (!selectedTournament) return;
-    setLoading(true);
-    try {
-      const data = await awardService.getTournamentAwards(selectedTournament);
-      setAwards(data);
-    } catch (error) {
-      console.error('加載獎項失敗：', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadAwards();
+    // 獲取獎項類型
+    const fetchAwardTypes = async () => {
+      try {
+        const response = await fetch('/api/awards/types');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setAwardTypes(data);
+      } catch (error) {
+        console.error('獲取獎項類型失敗:', error);
+        message.error('獲取獎項類型失敗');
+      }
+    };
+
+    // 獲取獎項列表
+    const fetchAwards = async () => {
+      if (!selectedTournament) return;
+      try {
+        const response = await fetch(`/api/awards?tournament_id=${selectedTournament}`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        setAwards(data);
+      } catch (error) {
+        console.error('獲取獎項列表失敗:', error);
+        message.error('獲取獎項列表失敗');
+      }
+    };
+
+    fetchAwardTypes();
+    fetchAwards();
   }, [selectedTournament]);
 
   const handleTournamentChange = (event) => {

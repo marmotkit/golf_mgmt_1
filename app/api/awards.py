@@ -3,7 +3,7 @@ from app.models import db, TournamentAward, AwardType
 import logging
 import traceback
 
-bp = Blueprint('awards', __name__)
+bp = Blueprint('awards', __name__, url_prefix='/api/awards')
 logger = logging.getLogger(__name__)
 
 @bp.route('/types', methods=['GET'])
@@ -16,75 +16,10 @@ def get_award_types():
         # 如果沒有獎項類型，自動初始化
         if not award_types:
             logger.info('獎項類型為空，開始初始化')
-            default_types = [
-                {
-                    'name': '總桿冠軍',
-                    'description': '總桿數最少者',
-                    'has_score': True,
-                    'has_rank': True,
-                    'max_winners': 1,
-                    'is_active': True
-                },
-                {
-                    'name': '淨桿冠軍',
-                    'description': '淨桿數最少者',
-                    'has_score': True,
-                    'has_rank': True,
-                    'max_winners': 1,
-                    'is_active': True
-                },
-                {
-                    'name': '淨桿亞軍',
-                    'description': '淨桿數第二少者',
-                    'has_score': True,
-                    'has_rank': True,
-                    'max_winners': 1,
-                    'is_active': True
-                },
-                {
-                    'name': '淨桿季軍',
-                    'description': '淨桿數第三少者',
-                    'has_score': True,
-                    'has_rank': True,
-                    'max_winners': 1,
-                    'is_active': True
-                },
-                {
-                    'name': '一桿進洞',
-                    'description': '一桿進洞者',
-                    'has_hole_number': True,
-                    'max_winners': None,
-                    'is_active': True
-                },
-                {
-                    'name': '最近洞獎',
-                    'description': '最接近洞口者',
-                    'has_hole_number': True,
-                    'max_winners': None,
-                    'is_active': True
-                },
-                {
-                    'name': '最遠洞獎',
-                    'description': '最遠距離進洞者',
-                    'has_hole_number': True,
-                    'max_winners': None,
-                    'is_active': True
-                }
-            ]
+            from init_award_types import init_award_types
+            init_award_types()
+            award_types = AwardType.query.filter_by(is_active=True).all()
             
-            for type_data in default_types:
-                award_type = AwardType(**type_data)
-                db.session.add(award_type)
-            
-            try:
-                db.session.commit()
-                logger.info('成功初始化獎項類型')
-                award_types = AwardType.query.filter_by(is_active=True).all()
-            except Exception as e:
-                db.session.rollback()
-                logger.error(f'初始化獎項類型時發生錯誤: {str(e)}')
-                raise
-        
         logger.info(f'找到 {len(award_types)} 個獎項類型')
         return jsonify([t.to_dict() for t in award_types])
     except Exception as e:
