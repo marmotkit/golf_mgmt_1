@@ -101,17 +101,27 @@ def create_app(config_class=Config):
                     logger.info('Initializing award types...')
                     default_types = [
                         {
-                            'name': '技術獎-一般組',
-                            'description': '最接近洞口者（一般組）',
-                            'has_hole_number': True,
-                            'max_winners': 3,
+                            'name': '技術獎-一般組-1近洞',
+                            'description': '一般組第一近洞',
+                            'max_winners': None,
                             'is_active': True
                         },
                         {
-                            'name': '技術獎-長青組',
-                            'description': '最接近洞口者（長青組）',
-                            'has_hole_number': True,
-                            'max_winners': 1,
+                            'name': '技術獎-一般組-2近洞',
+                            'description': '一般組第二近洞',
+                            'max_winners': None,
+                            'is_active': True
+                        },
+                        {
+                            'name': '技術獎-一般組-3近洞',
+                            'description': '一般組第三近洞',
+                            'max_winners': None,
+                            'is_active': True
+                        },
+                        {
+                            'name': '技術獎-長青組-1近洞',
+                            'description': '長青組第一近洞',
+                            'max_winners': None,
                             'is_active': True
                         },
                         {
