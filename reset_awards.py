@@ -22,6 +22,22 @@ def reset_award_types():
             init_award_types()
             print("已重新初始化獎項類型")
             
+            # 調整獎項順序
+            print("正在調整獎項順序...")
+            # 獲取跳跳獎和總桿冠軍
+            jump_award = AwardType.query.filter_by(name='跳跳獎').first()
+            champion_award = AwardType.query.filter_by(name='總桿冠軍').first()
+            
+            if jump_award and champion_award:
+                # 交換它們的 id
+                temp_id = jump_award.id
+                jump_award.id = champion_award.id
+                champion_award.id = temp_id
+                db.session.commit()
+                print("獎項順序調整成功")
+            else:
+                print("找不到需要調整順序的獎項")
+            
         except Exception as e:
             db.session.rollback()
             print(f"重置獎項類型時發生錯誤: {str(e)}")
