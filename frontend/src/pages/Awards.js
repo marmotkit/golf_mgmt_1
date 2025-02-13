@@ -26,6 +26,8 @@ import {
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import config from '../config';
+import * as awardService from '../services/awardService';
+import * as tournamentService from '../services/tournamentService';
 
 const Awards = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -37,117 +39,101 @@ const Awards = () => {
   const [currentAwardType, setCurrentAwardType] = useState(null);
   const [winnerInputs, setWinnerInputs] = useState({});
   const [netScoreWinners, setNetScoreWinners] = useState(Array(10).fill(''));
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  const [message, setMessage] = useState({ open: false, text: '', severity: 'success' });
 
   // 加載賽事列表
-  useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const response = await fetch(`${config.apiBaseUrl}/tournaments`);
-        if (!response.ok) throw new Error('獲取賽事列表失敗');
-        const data = await response.json();
-        setTournaments(data);
-      } catch (error) {
-        showMessage('獲取賽事列表失敗', 'error');
-      }
-    };
-
-    fetchTournaments();
-  }, []);
+  const fetchTournaments = async () => {
+    try {
+      const data = await tournamentService.getAllTournaments();
+      setTournaments(data);
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
 
   // 加載獎項類型
-  useEffect(() => {
-    const fetchAwardTypes = async () => {
-      try {
-        const response = await fetch(`${config.apiBaseUrl}/awards/types`);
-        if (!response.ok) throw new Error('獲取獎項類型失敗');
-        const data = await response.json();
-        setAwardTypes(data);
-        
-        // 初始化每個獎項類型的輸入狀態
-        const inputs = {};
-        data.forEach(type => {
-          inputs[type.id] = '';
-        });
-        setWinnerInputs(inputs);
-      } catch (error) {
-        showMessage('獲取獎項類型失敗', 'error');
-      }
-    };
+  const fetchAwardTypes = async () => {
+    try {
+      const data = await awardService.getAwardTypes();
+      setAwardTypes(data);
+      // 初始化每個獎項類型的輸入狀態
+      const inputs = {};
+      data.forEach(type => {
+        inputs[type.id] = '';
+      });
+      setWinnerInputs(inputs);
+    } catch (error) {
+      showMessage(error.message, 'error');
+    }
+  };
 
+  // 加載賽事獎項
+  const fetchAwards = async () => {
+    if (!selectedTournament) return;
+    setLoading(true);
+    try {
+      const data = await awardService.getTournamentAwards(selectedTournament);
+      setAwards(data);
+    } catch (error) {
+      showMessage(error.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTournaments();
     fetchAwardTypes();
   }, []);
 
-  // 加載賽事獎項
   useEffect(() => {
-    const fetchAwards = async () => {
-      if (!selectedTournament) return;
-      setLoading(true);
-      try {
-        const response = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
-        if (!response.ok) throw new Error('獲取獎項失敗');
-        const data = await response.json();
-        setAwards(data);
-      } catch (error) {
-        showMessage('獲取獎項失敗', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAwards();
+    if (selectedTournament) {
+      fetchAwards();
+    }
   }, [selectedTournament]);
 
-  const showMessage = (message, severity = 'success') => {
-    setSnackbar({
-      open: true,
-      message,
-      severity
-    });
+  const showMessage = (text, severity = 'success') => {
+    setMessage({ open: true, text, severity });
   };
 
   const handleTournamentChange = (event) => {
     setSelectedTournament(event.target.value);
   };
 
+  const handleWinnerInputChange = (awardTypeId) => (event) => {
+    setWinnerInputs(prev => ({
+      ...prev,
+      [awardTypeId]: event.target.value
+    }));
+  };
+
   const handleAddWinner = async (awardTypeId) => {
+    if (!selectedTournament) {
+      showMessage('請先選擇賽事', 'error');
+      return;
+    }
+
     const winnerName = winnerInputs[awardTypeId];
-    if (!winnerName?.trim()) {
+    if (!winnerName) {
       showMessage('請輸入得獎者姓名', 'error');
       return;
     }
 
     try {
-      const response = await fetch(`${config.apiBaseUrl}/awards`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          tournament_id: selectedTournament,
-          award_type_id: awardTypeId,
-          chinese_name: winnerName.trim()
-        })
+      await awardService.createTournamentAward({
+        tournament_id: selectedTournament,
+        award_type_id: awardTypeId,
+        chinese_name: winnerName
       });
 
-      if (!response.ok) throw new Error('新增得獎者失敗');
-      
-      // 重新載入獎項列表
-      const awardsResponse = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
-      if (!awardsResponse.ok) throw new Error('重新載入獎項失敗');
-      const data = await awardsResponse.json();
-      setAwards(data);
-      
-      // 清空對應獎項的輸入
+      // 清空該獎項的輸入框
       setWinnerInputs(prev => ({
         ...prev,
         [awardTypeId]: ''
       }));
-      showMessage('新增成功');
+
+      await fetchAwards();
+      showMessage('新增得獎者成功');
     } catch (error) {
       showMessage(error.message, 'error');
     }
@@ -155,21 +141,11 @@ const Awards = () => {
 
   const handleDeleteWinner = async (awardId) => {
     try {
-      const response = await fetch(`${config.apiBaseUrl}/awards/${awardId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) throw new Error('刪除得獎者失敗');
-
-      // 重新載入獎項列表
-      const awardsResponse = await fetch(`${config.apiBaseUrl}/awards?tournament_id=${selectedTournament}`);
-      if (!awardsResponse.ok) throw new Error('重新載入獎項失敗');
-      const data = await awardsResponse.json();
-      setAwards(data);
-      
-      showMessage('刪除成功');
+      await awardService.deleteTournamentAward(awardId);
+      await fetchAwards();
+      showMessage('刪除得獎者成功');
     } catch (error) {
-      showMessage('刪除得獎者失敗', 'error');
+      showMessage(error.message, 'error');
     }
   };
 
@@ -206,56 +182,44 @@ const Awards = () => {
           {title}
         </Typography>
         <Grid container spacing={2}>
-          {types.map(type => (
-            <Grid item xs={12} key={type.id}>
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1">{type.name}</Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
-                  <TextField
-                    size="small"
-                    placeholder="輸入得獎者姓名"
-                    value={winnerInputs[type.id] || ''}
-                    onChange={(e) => {
-                      const newValue = e.target.value;
-                      setWinnerInputs(prev => ({
-                        ...prev,
-                        [type.id]: newValue
-                      }));
-                    }}
-                    sx={{ mr: 1, minWidth: '200px' }}
-                  />
-                  <Button
-                    variant="contained"
-                    onClick={() => handleAddWinner(type.id)}
-                    disabled={!winnerInputs[type.id]?.trim()}
-                  >
-                    新增
-                  </Button>
+          {types.map(type => {
+            const typeAwards = awards.filter(a => a.award_type_id === type.id);
+            return (
+              <Grid item xs={12} key={type.id}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1">{type.name}</Typography>
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                    <TextField
+                      size="small"
+                      value={winnerInputs[type.id] || ''}
+                      onChange={handleWinnerInputChange(type.id)}
+                      placeholder="輸入得獎者姓名"
+                      sx={{ minWidth: 200 }}
+                    />
+                    <Button
+                      variant="contained"
+                      onClick={() => handleAddWinner(type.id)}
+                      size="small"
+                    >
+                      新增
+                    </Button>
+                  </Box>
+                  {typeAwards.map(award => (
+                    <Box key={award.id} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography>{award.chinese_name}</Typography>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteWinner(award.id)}
+                      >
+                        刪除
+                      </Button>
+                    </Box>
+                  ))}
                 </Box>
-                <List dense>
-                  {awards
-                    .filter(award => award.award_type_id === type.id)
-                    .map((award) => (
-                      <ListItem key={award.id}>
-                        <ListItemText 
-                          primary={award.chinese_name}
-                        />
-                        <ListItemSecondaryAction>
-                          <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={() => handleDeleteWinner(award.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))}
-                </List>
-              </Box>
-              <Divider />
-            </Grid>
-          ))}
+              </Grid>
+            );
+          })}
         </Grid>
       </Paper>
     );
@@ -369,16 +333,16 @@ const Awards = () => {
       )}
 
       <Snackbar
-        open={snackbar.open}
+        open={message.open}
         autoHideDuration={6000}
-        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        onClose={() => setMessage(prev => ({ ...prev, open: false }))}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
         <Alert
-          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
-          severity={snackbar.severity}
+          onClose={() => setMessage(prev => ({ ...prev, open: false }))}
+          severity={message.severity}
         >
-          {snackbar.message}
+          {message.text}
         </Alert>
       </Snackbar>
     </Box>
