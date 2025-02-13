@@ -3,9 +3,16 @@ import axios from '../utils/axios';
 // 獲取賽事獎項
 export const getTournamentAwards = async (tournamentId) => {
   try {
+    console.log('Requesting tournament awards for ID:', tournamentId);
     const response = await axios.get(`/awards/?tournament_id=${tournamentId}`);
+    console.log('Tournament awards response:', response);
     return response.data;
   } catch (error) {
+    console.error('Error getting tournament awards:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
     throw new Error(error.response?.data?.message || '獲取獎項失敗');
   }
 };
@@ -43,9 +50,16 @@ export const deleteTournamentAward = async (id) => {
 // 獲取獎項類型
 export const getAwardTypes = async () => {
   try {
+    console.log('Requesting award types');
     const response = await axios.get('/awards/types');
+    console.log('Award types response:', response);
     return response.data;
   } catch (error) {
+    console.error('Error getting award types:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
     throw new Error(error.response?.data?.message || '獲取獎項類型失敗');
   }
 };
