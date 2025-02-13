@@ -203,7 +203,7 @@ def create_app(config_class=Config):
         app.register_blueprint(reports.bp, url_prefix='/api/reports')  
         app.register_blueprint(dashboard.bp, url_prefix='/api/dashboard')  
         app.register_blueprint(version.bp, url_prefix='/api/version')  
-        app.register_blueprint(awards.bp, url_prefix='/api/awards')  
+        app.register_blueprint(awards.bp)
         logger.info('All blueprints registered')
     except Exception as e:
         logger.error(f'Error registering blueprints: {str(e)}')
