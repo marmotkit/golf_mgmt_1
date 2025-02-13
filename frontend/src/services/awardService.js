@@ -4,7 +4,7 @@ import axios from '../utils/axios';
 export const getTournamentAwards = async (tournamentId) => {
   try {
     console.log('Requesting tournament awards for ID:', tournamentId);
-    const response = await axios.get(`awards/?tournament_id=${tournamentId}`);
+    const response = await axios.get(`/api/awards/?tournament_id=${tournamentId}`);
     console.log('Tournament awards response:', response);
     return response.data;
   } catch (error) {
@@ -20,7 +20,7 @@ export const getTournamentAwards = async (tournamentId) => {
 // 創建賽事獎項
 export const createTournamentAward = async (awardData) => {
   try {
-    const response = await axios.post('awards', awardData);
+    const response = await axios.post('/api/awards', awardData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || '創建獎項失敗');
@@ -30,7 +30,7 @@ export const createTournamentAward = async (awardData) => {
 // 更新賽事獎項
 export const updateTournamentAward = async (id, awardData) => {
   try {
-    const response = await axios.put(`awards/${id}`, awardData);
+    const response = await axios.put(`/api/awards/${id}`, awardData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || '更新獎項失敗');
@@ -40,7 +40,7 @@ export const updateTournamentAward = async (id, awardData) => {
 // 刪除賽事獎項
 export const deleteTournamentAward = async (id) => {
   try {
-    const response = await axios.delete(`awards/${id}`);
+    const response = await axios.delete(`/api/awards/${id}`);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || '刪除獎項失敗');
@@ -51,7 +51,7 @@ export const deleteTournamentAward = async (id) => {
 export const getAwardTypes = async () => {
   try {
     console.log('Requesting award types');
-    const response = await axios.get('awards/types');
+    const response = await axios.get('/api/awards/types');
     console.log('Award types response:', response);
     return response.data;
   } catch (error) {
@@ -67,7 +67,7 @@ export const getAwardTypes = async () => {
 // 創建獎項類型
 export const createAwardType = async (typeData) => {
   try {
-    const response = await axios.post('/awards/types', typeData);
+    const response = await axios.post('/api/awards/types', typeData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || '創建獎項類型失敗');
@@ -77,7 +77,7 @@ export const createAwardType = async (typeData) => {
 // 更新獎項類型
 export const updateAwardType = async (id, typeData) => {
   try {
-    const response = await axios.put(`/awards/types/${id}`, typeData);
+    const response = await axios.put(`/api/awards/types/${id}`, typeData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || '更新獎項類型失敗');
