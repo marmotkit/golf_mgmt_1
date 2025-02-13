@@ -132,23 +132,22 @@ const Awards = () => {
     }
   };
 
-  const renderAwardSection = (title, awardsList) => {
-    if (!awardsList) return null;
+  const renderAwardSection = (awardType) => {
+    if (!awardType) return null;
 
-    // 獲取獎項類型ID
-    const typeId = awardsList[0]?.award_type_id || 
-      awardTypes.find(t => t.name.startsWith(title.replace(' - ', '-')))?.id;
-
-    if (!typeId) return null;
+    const typeAwards = awards.filter(a => a.award_type_id === awardType.id);
 
     return (
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>{title}</Typography>
-        {awardsList.length > 0 && (
+        <Typography variant="h6" gutterBottom>{awardType.name}</Typography>
+        {typeAwards.length > 0 && (
           <List>
-            {awardsList.map(award => (
+            {typeAwards.map(award => (
               <ListItem key={award.id}>
-                <ListItemText primary={award.chinese_name} />
+                <ListItemText 
+                  primary={award.chinese_name} 
+                  secondary={award.remarks}
+                />
                 <ListItemSecondaryAction>
                   <IconButton edge="end" onClick={() => handleDeleteWinner(award.id)}>
                     <DeleteIcon />
@@ -161,13 +160,13 @@ const Awards = () => {
         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
           <TextField
             size="small"
-            value={winnerInputs[typeId] || ''}
-            onChange={handleInputChange(typeId)}
+            value={winnerInputs[awardType.id] || ''}
+            onChange={handleInputChange(awardType.id)}
             placeholder="輸入得獎者姓名"
           />
           <Button
             variant="contained"
-            onClick={() => handleAddWinner(typeId)}
+            onClick={() => handleAddWinner(awardType.id)}
           >
             新增
           </Button>
@@ -205,38 +204,12 @@ const Awards = () => {
 
       {selectedTournament && (
         <Paper sx={{ p: 3 }}>
-          {/* 技術獎 - 一般組 */}
-          {renderAwardSection('技術獎 - 一般組', 
-            awards.filter(a => a.award_type?.name?.startsWith('技術獎-一般組'))
-          )}
-          <Divider sx={{ my: 2 }} />
-
-          {/* 技術獎 - 長青組 */}
-          {renderAwardSection('技術獎 - 長青組',
-            awards.filter(a => a.award_type?.name?.startsWith('技術獎-長青組'))
-          )}
-          <Divider sx={{ my: 2 }} />
-
-          {/* 總桿冠軍 */}
-          {renderAwardSection('總桿冠軍',
-            awards.filter(a => a.award_type?.name === '總桿冠軍')
-          )}
-          <Divider sx={{ my: 2 }} />
-
-          {/* 淨桿獎 */}
-          {renderAwardSection('淨桿獎',
-            awards.filter(a => a.award_type?.name === '淨桿獎')
-          )}
-          <Divider sx={{ my: 2 }} />
-
-          {/* 其他獎項 */}
-          {renderAwardSection('其他獎項',
-            awards.filter(a => 
-              !a.award_type?.name?.startsWith('技術獎') &&
-              a.award_type?.name !== '總桿冠軍' &&
-              a.award_type?.name !== '淨桿獎'
-            )
-          )}
+          {awardTypes.map(awardType => (
+            <React.Fragment key={awardType.id}>
+              {renderAwardSection(awardType)}
+              <Divider sx={{ my: 2 }} />
+            </React.Fragment>
+          ))}
         </Paper>
       )}
 
