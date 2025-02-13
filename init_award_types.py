@@ -44,7 +44,7 @@ def init_award_types():
             # B. 跳跳獎
             {
                 'name': '跳跳獎',
-                'description': '最大進步獎',
+                'description': '',
                 'max_winners': None,  # 可多人
                 'is_active': True
             },
