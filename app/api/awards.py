@@ -6,6 +6,18 @@ import traceback
 bp = Blueprint('awards', __name__)
 logger = logging.getLogger(__name__)
 
+@bp.before_request
+def log_request_info():
+    """記錄每個請求的詳細信息"""
+    logger.info('====== 獎項管理 API 請求開始 ======')
+    logger.info(f'請求方法: {request.method}')
+    logger.info(f'請求路徑: {request.path}')
+    logger.info(f'請求參數: {dict(request.args)}')
+    logger.info(f'請求頭: {dict(request.headers)}')
+    if request.is_json:
+        logger.info(f'請求數據: {request.get_json()}')
+    logger.info('================================')
+
 @bp.route('/types', methods=['GET'])
 def get_award_types():
     """獲取所有獎項類型"""
@@ -21,7 +33,9 @@ def get_award_types():
             award_types = AwardType.query.filter_by(is_active=True).all()
             
         logger.info(f'找到 {len(award_types)} 個獎項類型')
-        return jsonify([t.to_dict() for t in award_types])
+        result = [t.to_dict() for t in award_types]
+        logger.info(f'返回數據: {result}')
+        return jsonify(result)
     except Exception as e:
         logger.error(f"獲取獎項類型時發生錯誤: {str(e)}")
         logger.error(f"錯誤類型: {type(e).__name__}")
@@ -67,11 +81,15 @@ def update_award_type(id):
 def get_tournament_awards():
     """獲取賽事獎項"""
     try:
+        logger.info('開始獲取賽事獎項')
         tournament_id = request.args.get('tournament_id', type=int)
+        logger.info(f'賽事ID: {tournament_id}')
+        
         if not tournament_id:
+            logger.error('未提供賽事ID')
             return jsonify({'error': '必須提供賽事ID'}), 400
             
-        logger.info(f'獲取賽事 {tournament_id} 的獎項')
+        logger.info(f'查詢賽事 {tournament_id} 的獎項')
         awards = TournamentAward.query.filter_by(tournament_id=tournament_id).all()
         logger.info(f'找到 {len(awards)} 個獎項')
         
@@ -85,6 +103,7 @@ def get_tournament_awards():
                 logger.error(traceback.format_exc())
                 continue
         
+        logger.info(f'返回數據: {result}')
         return jsonify(result)
     except Exception as e:
         logger.error(f"獲取賽事獎項時發生錯誤: {str(e)}")
