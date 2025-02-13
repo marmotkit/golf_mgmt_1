@@ -30,6 +30,7 @@ const Awards = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ open: false, text: '', severity: 'success' });
   const [winnerInputs, setWinnerInputs] = useState({});
+  const [awardTypes, setAwardTypes] = useState([]);
 
   // 加載賽事列表
   useEffect(() => {
@@ -59,6 +60,7 @@ const Awards = () => {
         awardService.getAwardTypes()
       ]);
       setAwards(awardsData);
+      setAwardTypes(typesData);
       
       // 初始化輸入框
       const inputs = {};
@@ -131,26 +133,31 @@ const Awards = () => {
   };
 
   const renderAwardSection = (title, awardsList) => {
-    if (!awardsList || awardsList.length === 0) return null;
+    if (!awardsList) return null;
 
-    // 獲取第一個獎項的類型ID用於輸入框
-    const typeId = awardsList[0].award_type_id;
+    // 獲取獎項類型ID
+    const typeId = awardsList[0]?.award_type_id || 
+      awardTypes.find(t => t.name.startsWith(title.replace(' - ', '-')))?.id;
+
+    if (!typeId) return null;
 
     return (
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
-        <List>
-          {awardsList.map(award => (
-            <ListItem key={award.id}>
-              <ListItemText primary={award.chinese_name} />
-              <ListItemSecondaryAction>
-                <IconButton edge="end" onClick={() => handleDeleteWinner(award.id)}>
-                  <DeleteIcon />
-                </IconButton>
-              </ListItemSecondaryAction>
-            </ListItem>
-          ))}
-        </List>
+        {awardsList.length > 0 && (
+          <List>
+            {awardsList.map(award => (
+              <ListItem key={award.id}>
+                <ListItemText primary={award.chinese_name} />
+                <ListItemSecondaryAction>
+                  <IconButton edge="end" onClick={() => handleDeleteWinner(award.id)}>
+                    <DeleteIcon />
+                  </IconButton>
+                </ListItemSecondaryAction>
+              </ListItem>
+            ))}
+          </List>
+        )}
         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
           <TextField
             size="small"
@@ -200,13 +207,13 @@ const Awards = () => {
         <Paper sx={{ p: 3 }}>
           {/* 技術獎 - 一般組 */}
           {renderAwardSection('技術獎 - 一般組', 
-            awards.filter(a => a.award_type?.name.includes('技術獎-一般組'))
+            awards.filter(a => a.award_type?.name?.startsWith('技術獎-一般組'))
           )}
           <Divider sx={{ my: 2 }} />
 
           {/* 技術獎 - 長青組 */}
           {renderAwardSection('技術獎 - 長青組',
-            awards.filter(a => a.award_type?.name.includes('技術獎-長青組'))
+            awards.filter(a => a.award_type?.name?.startsWith('技術獎-長青組'))
           )}
           <Divider sx={{ my: 2 }} />
 
@@ -225,7 +232,7 @@ const Awards = () => {
           {/* 其他獎項 */}
           {renderAwardSection('其他獎項',
             awards.filter(a => 
-              !a.award_type?.name.includes('技術獎') &&
+              !a.award_type?.name?.startsWith('技術獎') &&
               a.award_type?.name !== '總桿冠軍' &&
               a.award_type?.name !== '淨桿獎'
             )
