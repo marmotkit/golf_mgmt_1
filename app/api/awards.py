@@ -3,7 +3,7 @@ from app.models import db, TournamentAward, AwardType
 import logging
 import traceback
 
-bp = Blueprint('awards', __name__)
+bp = Blueprint('awards', __name__, url_prefix='/api/awards')
 logger = logging.getLogger(__name__)
 
 @bp.before_request
