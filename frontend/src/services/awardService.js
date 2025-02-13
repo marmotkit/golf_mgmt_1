@@ -3,7 +3,7 @@ import axios from '../utils/axios';
 // 獲取賽事獎項
 export const getTournamentAwards = async (tournamentId) => {
   try {
-    const response = await axios.get(`/awards?tournament_id=${tournamentId}`);
+    const response = await axios.get(`/awards/?tournament_id=${tournamentId}`);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || '獲取獎項失敗');
