@@ -130,14 +130,17 @@ const Awards = () => {
     }
   };
 
-  const renderAwardSection = (title, awards) => {
-    if (!awards || awards.length === 0) return null;
+  const renderAwardSection = (title, awardsList) => {
+    if (!awardsList || awardsList.length === 0) return null;
+
+    // 獲取第一個獎項的類型ID用於輸入框
+    const typeId = awardsList[0].award_type_id;
 
     return (
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{title}</Typography>
         <List>
-          {awards.map(award => (
+          {awardsList.map(award => (
             <ListItem key={award.id}>
               <ListItemText primary={award.chinese_name} />
               <ListItemSecondaryAction>
@@ -151,13 +154,13 @@ const Awards = () => {
         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
           <TextField
             size="small"
-            value={winnerInputs[award.award_type_id] || ''}
-            onChange={handleInputChange(award.award_type_id)}
+            value={winnerInputs[typeId] || ''}
+            onChange={handleInputChange(typeId)}
             placeholder="輸入得獎者姓名"
           />
           <Button
             variant="contained"
-            onClick={() => handleAddWinner(award.award_type_id)}
+            onClick={() => handleAddWinner(typeId)}
           >
             新增
           </Button>
