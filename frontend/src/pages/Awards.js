@@ -35,10 +35,7 @@ const Awards = () => {
   const [awardTypes, setAwardTypes] = useState([]);
   const [awards, setAwards] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [currentAwardType, setCurrentAwardType] = useState(null);
-  const [winnerInputs, setWinnerInputs] = useState({});
-  const [netScoreWinners, setNetScoreWinners] = useState(Array(10).fill(''));
+  const [winnerName, setWinnerName] = useState('');
   const [message, setMessage] = useState({ open: false, text: '', severity: 'success' });
 
   // 加載賽事列表
@@ -56,13 +53,6 @@ const Awards = () => {
     try {
       const data = await awardService.getAwardTypes();
       setAwardTypes(data);
-      
-      // 初始化每個獎項類型的輸入狀態
-      const initialInputs = {};
-      data.forEach(type => {
-        initialInputs[type.id] = '';
-      });
-      setWinnerInputs(initialInputs);
     } catch (error) {
       showMessage(error.message, 'error');
     }
@@ -101,21 +91,12 @@ const Awards = () => {
     setSelectedTournament(event.target.value);
   };
 
-  const handleWinnerInputChange = (awardTypeId) => (event) => {
-    const newValue = event.target.value;
-    setWinnerInputs(prev => ({
-      ...prev,
-      [awardTypeId]: newValue
-    }));
-  };
-
   const handleAddWinner = async (awardTypeId) => {
     if (!selectedTournament) {
       showMessage('請先選擇賽事', 'error');
       return;
     }
 
-    const winnerName = winnerInputs[awardTypeId];
     if (!winnerName?.trim()) {
       showMessage('請輸入得獎者姓名', 'error');
       return;
@@ -128,12 +109,7 @@ const Awards = () => {
         chinese_name: winnerName.trim()
       });
 
-      // 清空該獎項的輸入框
-      setWinnerInputs(prev => ({
-        ...prev,
-        [awardTypeId]: ''
-      }));
-
+      setWinnerName('');
       await fetchAwards();
       showMessage('新增得獎者成功');
     } catch (error) {
@@ -151,140 +127,77 @@ const Awards = () => {
     }
   };
 
-  const handleNetScoreSubmit = async () => {
-    const validWinners = netScoreWinners.filter(name => name.trim());
-    if (validWinners.length === 0) {
-      showMessage('請至少輸入一位得獎者', 'error');
-      return;
-    }
-
-    const netScoreType = awardTypes.find(type => type.name === '淨桿獎');
-    if (!netScoreType) {
-      showMessage('找不到淨桿獎項類型', 'error');
-      return;
-    }
-
-    try {
-      await Promise.all(
-        validWinners.map((name, index) => 
-          handleAddWinner(netScoreType.id, index + 1)
-        )
-      );
-      setNetScoreWinners(Array(10).fill(''));
-      showMessage('批量新增成功');
-    } catch (error) {
-      showMessage('批量新增失敗', 'error');
-    }
-  };
-
-  const renderAwardSection = (title, types) => {
-    if (!types || types.length === 0) return null;
+  const renderAwardItem = (type) => {
+    const typeAwards = awards.filter(a => a.award_type_id === type.id);
 
     return (
-      <Paper sx={{ p: 2, mb: 2 }} key={title}>
-        <Typography variant="h6" gutterBottom>
-          {title}
-        </Typography>
-        <Grid container spacing={2}>
-          {types.map(type => {
-            const typeAwards = awards.filter(a => a.award_type_id === type.id);
-            const inputValue = winnerInputs[type.id] || '';
+      <Box key={type.id} sx={{ mb: 2 }}>
+        <Typography variant="subtitle1">{type.name}</Typography>
+        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <TextField
+            size="small"
+            value={winnerName}
+            onChange={(e) => setWinnerName(e.target.value)}
+            placeholder="輸入得獎者姓名"
+            sx={{ minWidth: 200 }}
+          />
+          <Button
+            variant="contained"
+            onClick={() => handleAddWinner(type.id)}
+            size="small"
+          >
+            新增
+          </Button>
+        </Box>
+        {typeAwards.map(award => (
+          <Box key={award.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+            <Typography>{award.chinese_name}</Typography>
+            <Button
+              size="small"
+              color="error"
+              onClick={() => handleDeleteWinner(award.id)}
+            >
+              刪除
+            </Button>
+          </Box>
+        ))}
+      </Box>
+    );
+  };
 
-            return (
-              <Grid item xs={12} key={type.id}>
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="subtitle1">{type.name}</Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                    <TextField
-                      size="small"
-                      value={inputValue}
-                      onChange={handleWinnerInputChange(type.id)}
-                      placeholder="輸入得獎者姓名"
-                      sx={{ minWidth: 200 }}
-                    />
-                    <Button
-                      variant="contained"
-                      onClick={() => handleAddWinner(type.id)}
-                      size="small"
-                    >
-                      新增
-                    </Button>
-                  </Box>
-                  {typeAwards.map(award => (
-                    <Box key={award.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-                      <Typography>{award.chinese_name}</Typography>
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteWinner(award.id)}
-                      >
-                        刪除
-                      </Button>
-                    </Box>
-                  ))}
-                </Box>
-              </Grid>
-            );
-          })}
-        </Grid>
+  const renderTechnicalAwards = () => {
+    const generalTypes = awardTypes.filter(type => type.name.includes('技術獎-一般組'));
+    const seniorTypes = awardTypes.filter(type => type.name.includes('技術獎-長青組'));
+
+    return (
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6" gutterBottom>技術獎</Typography>
+        <Box sx={{ ml: 2 }}>
+          <Typography variant="subtitle1" gutterBottom>一般組</Typography>
+          <Box sx={{ ml: 2 }}>
+            {generalTypes.map(renderAwardItem)}
+          </Box>
+          <Typography variant="subtitle1" gutterBottom>長青組</Typography>
+          <Box sx={{ ml: 2 }}>
+            {seniorTypes.map(renderAwardItem)}
+          </Box>
+        </Box>
       </Paper>
     );
   };
 
-  const renderNetScoreSection = () => {
-    const netScoreType = awardTypes.find(type => type.name === '淨桿獎');
-    if (!netScoreType) return null;
+  const renderOtherAwards = () => {
+    const otherTypes = awardTypes.filter(type => 
+      !type.name.includes('技術獎') && 
+      type.name !== '淨桿獎'
+    );
 
     return (
       <Paper sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          淨桿獎
-        </Typography>
-        <Grid container spacing={2}>
-          {netScoreWinners.map((winner, index) => (
-            <Grid item xs={12} sm={6} md={4} key={index}>
-              <TextField
-                fullWidth
-                size="small"
-                label={`第 ${index + 1} 名`}
-                value={winner}
-                onChange={(e) => {
-                  const newWinners = [...netScoreWinners];
-                  newWinners[index] = e.target.value;
-                  setNetScoreWinners(newWinners);
-                }}
-              />
-            </Grid>
-          ))}
-        </Grid>
-        <Button
-          variant="contained"
-          onClick={handleNetScoreSubmit}
-          sx={{ mt: 2 }}
-        >
-          批量新增
-        </Button>
-        <List dense>
-          {awards
-            .filter(award => award.award_type_id === netScoreType.id)
-            .sort((a, b) => (a.rank || 0) - (b.rank || 0))
-            .map((award) => (
-              <ListItem key={award.id}>
-                <ListItemText 
-                  primary={`第${award.rank}名：${award.chinese_name}`}
-                />
-                <ListItemSecondaryAction>
-                  <IconButton
-                    edge="end"
-                    size="small"
-                    onClick={() => handleDeleteWinner(award.id)}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
-            ))}
-        </List>
+        <Typography variant="h6" gutterBottom>其他獎項</Typography>
+        <Box sx={{ ml: 2 }}>
+          {otherTypes.map(renderAwardItem)}
+        </Box>
       </Paper>
     );
   };
@@ -297,21 +210,9 @@ const Awards = () => {
     );
   }
 
-  // 將獎項類型分類
-  const generalTypes = awardTypes.filter(type => type.name.includes('技術獎-一般組'));
-  const seniorTypes = awardTypes.filter(type => type.name.includes('技術獎-長青組'));
-  const netScoreType = awardTypes.find(type => type.name === '淨桿獎');
-  const otherTypes = awardTypes.filter(type => 
-    !type.name.includes('技術獎-一般組') && 
-    !type.name.includes('技術獎-長青組') && 
-    type.name !== '淨桿獎'
-  );
-
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        獎項管理
-      </Typography>
+      <Typography variant="h4" gutterBottom>獎項管理</Typography>
 
       <Box sx={{ mb: 3 }}>
         <FormControl sx={{ minWidth: 300 }}>
@@ -332,10 +233,8 @@ const Awards = () => {
 
       {selectedTournament && (
         <>
-          {renderAwardSection('技術獎 - 一般組', generalTypes)}
-          {renderAwardSection('技術獎 - 長青組', seniorTypes)}
-          {netScoreType && renderNetScoreSection()}
-          {otherTypes.length > 0 && renderAwardSection('其他獎項', otherTypes)}
+          {renderTechnicalAwards()}
+          {renderOtherAwards()}
         </>
       )}
 
