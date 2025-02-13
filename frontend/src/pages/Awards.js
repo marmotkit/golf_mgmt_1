@@ -91,13 +91,14 @@ const Awards = () => {
     }));
   };
 
-  const handleAddWinner = async (typeId) => {
+  const handleAddWinner = async (typeId, rank = null) => {
     if (!selectedTournament) {
       showMessage('請先選擇賽事', 'error');
       return;
     }
 
-    const winnerName = winnerInputs[typeId];
+    const inputKey = rank ? `${typeId}_${rank}` : typeId;
+    const winnerName = winnerInputs[inputKey];
     if (!winnerName?.trim()) {
       showMessage('請輸入得獎者姓名', 'error');
       return;
@@ -107,13 +108,14 @@ const Awards = () => {
       await awardService.createTournamentAward({
         tournament_id: selectedTournament,
         award_type_id: typeId,
-        chinese_name: winnerName.trim()
+        chinese_name: winnerName.trim(),
+        rank: rank
       });
 
       // 清空該獎項的輸入框
       setWinnerInputs(prev => ({
         ...prev,
-        [typeId]: ''
+        [inputKey]: ''
       }));
       
       await fetchAwards();
@@ -138,6 +140,67 @@ const Awards = () => {
 
     const typeAwards = awards.filter(a => a.award_type_id === awardType.id);
 
+    // 特殊處理淨桿獎
+    if (awardType.name === '淨桿獎') {
+      return (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>{awardType.name}</Typography>
+          <Grid container spacing={2}>
+            {[...Array(10)].map((_, index) => {
+              const award = typeAwards.find(a => a.rank === index + 1);
+              return (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={index}>
+                  <Paper sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" gutterBottom>
+                      第 {index + 1} 名
+                    </Typography>
+                    {award ? (
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Box>
+                          <Typography>{award.chinese_name}</Typography>
+                          {award.remarks && (
+                            <Typography variant="body2" color="text.secondary">
+                              {award.remarks}
+                            </Typography>
+                          )}
+                        </Box>
+                        <IconButton 
+                          edge="end" 
+                          onClick={() => handleDeleteWinner(award.id)}
+                          size="small"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
+                    ) : (
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <TextField
+                          size="small"
+                          value={winnerInputs[`${awardType.id}_${index + 1}`] || ''}
+                          onChange={(e) => handleInputChange(`${awardType.id}_${index + 1}`)(e)}
+                          placeholder="輸入得獎者姓名"
+                          autoComplete="off"
+                          fullWidth
+                        />
+                        <Button
+                          variant="contained"
+                          onClick={() => handleAddWinner(awardType.id, index + 1)}
+                          size="small"
+                        >
+                          新增
+                        </Button>
+                      </Box>
+                    )}
+                  </Paper>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Box>
+      );
+    }
+
+    // 其他獎項的一般顯示方式
     return (
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{awardType.name}</Typography>
@@ -172,6 +235,7 @@ const Awards = () => {
             value={winnerInputs[awardType.id] || ''}
             onChange={handleInputChange(awardType.id)}
             placeholder="輸入得獎者姓名"
+            autoComplete="off"
           />
           <Button
             variant="contained"
