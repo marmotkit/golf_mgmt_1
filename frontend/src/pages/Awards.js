@@ -17,7 +17,8 @@ import {
   IconButton,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Grid
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import * as awardService from '../services/awardService';
@@ -141,21 +142,29 @@ const Awards = () => {
       <Box sx={{ mb: 3 }}>
         <Typography variant="h6" gutterBottom>{awardType.name}</Typography>
         {typeAwards.length > 0 && (
-          <List>
+          <Grid container spacing={2}>
             {typeAwards.map(award => (
-              <ListItem key={award.id}>
-                <ListItemText 
-                  primary={award.chinese_name} 
-                  secondary={award.remarks}
-                />
-                <ListItemSecondaryAction>
-                  <IconButton edge="end" onClick={() => handleDeleteWinner(award.id)}>
+              <Grid item xs={12} sm={6} md={4} lg={3} key={award.id}>
+                <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography>{award.chinese_name}</Typography>
+                    {award.remarks && (
+                      <Typography variant="body2" color="text.secondary">
+                        {award.remarks}
+                      </Typography>
+                    )}
+                  </Box>
+                  <IconButton 
+                    edge="end" 
+                    onClick={() => handleDeleteWinner(award.id)}
+                    size="small"
+                  >
                     <DeleteIcon />
                   </IconButton>
-                </ListItemSecondaryAction>
-              </ListItem>
+                </Paper>
+              </Grid>
             ))}
-          </List>
+          </Grid>
         )}
         <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
           <TextField
