@@ -41,7 +41,14 @@ def init_award_types():
                 'max_winners': None,  # 可多人
                 'is_active': True
             },
-            # B. 總桿冠軍
+            # B. 跳跳獎
+            {
+                'name': '跳跳獎',
+                'description': '最大進步獎',
+                'max_winners': None,  # 可多人
+                'is_active': True
+            },
+            # C. 總桿冠軍
             {
                 'name': '總桿冠軍',
                 'description': '總桿數最少者',
@@ -49,7 +56,7 @@ def init_award_types():
                 'max_winners': 1,  # 只有1人
                 'is_active': True
             },
-            # C. 淨桿獎
+            # D. 淨桿獎
             {
                 'name': '淨桿獎',
                 'description': '淨桿成績',
@@ -58,28 +65,28 @@ def init_award_types():
                 'max_winners': 10,  # 1-10名，每名1人
                 'is_active': True
             },
-            # D. 會長獎
+            # E. 會長獎
             {
                 'name': '會長獎',
                 'description': '會長特別獎',
                 'max_winners': 1,  # 只有1人
                 'is_active': True
             },
-            # E. BB獎
+            # F. BB獎
             {
                 'name': 'BB獎',
                 'description': '特殊表現獎',
                 'max_winners': 1,  # 只有1人
                 'is_active': True
             },
-            # F. Eagle獎
+            # G. Eagle獎
             {
                 'name': 'Eagle獎',
                 'description': 'Eagle成就',
                 'max_winners': None,  # 可多人
                 'is_active': True
             },
-            # G. HIO
+            # H. HIO
             {
                 'name': 'HIO',
                 'description': '一桿進洞（Hole in One）',
@@ -87,7 +94,7 @@ def init_award_types():
                 'max_winners': 1,  # 只有1人
                 'is_active': True
             },
-            # H. 其他
+            # I. 其他
             {
                 'name': '其他',
                 'description': '臨時增加的特殊獎項',
