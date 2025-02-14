@@ -3,7 +3,7 @@ import axios from '../utils/axios';
 // 登入
 export const login = async (credentials) => {
   try {
-    const response = await axios.post('/api/auth/login', credentials);
+    const response = await axios.post('/auth/login', credentials);
     return response.data;
   } catch (error) {
     if (error.response) {
@@ -16,7 +16,7 @@ export const login = async (credentials) => {
 // 獲取當前用戶信息
 export const getCurrentUser = async () => {
   try {
-    const response = await axios.get('/api/auth/me');
+    const response = await axios.get('/auth/me');
     return response.data;
   } catch (error) {
     if (error.response) {
