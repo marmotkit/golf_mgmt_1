@@ -16,7 +16,7 @@ const handleError = (error) => {
 // 獲取賽事列表
 export const getTournaments = async () => {
   try {
-    const response = await axios.get('/reports/tournaments');
+    const response = await axios.get('/api/reports/tournaments');
     return response.data;
   } catch (error) {
     handleError(error);
@@ -26,7 +26,7 @@ export const getTournaments = async () => {
 // 獲取統計數據
 export const getStats = async (tournamentIds) => {
   try {
-    const response = await axios.post('/reports/stats', { tournament_ids: tournamentIds });
+    const response = await axios.post('/api/reports/stats', { tournament_ids: tournamentIds });
     return response.data;
   } catch (error) {
     handleError(error);
