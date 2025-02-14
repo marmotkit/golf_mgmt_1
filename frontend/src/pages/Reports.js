@@ -28,7 +28,7 @@ import {
   ResponsiveContainer,
   LabelList
 } from 'recharts';
-import api from '../api';
+import * as reportService from '../services/reportService';
 
 const Reports = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -41,8 +41,8 @@ const Reports = () => {
   useEffect(() => {
     const fetchTournaments = async () => {
       try {
-        const response = await api.get('/reports/tournaments');
-        setTournaments(response.data);
+        const data = await reportService.getTournaments();
+        setTournaments(data);
       } catch (err) {
         setError('獲取賽事列表失敗');
         console.error('Error fetching tournaments:', err);
@@ -63,10 +63,8 @@ const Reports = () => {
       setError(null);
 
       try {
-        const response = await api.post('/reports/stats', {
-          tournament_ids: selectedTournaments
-        });
-        setStats(response.data);
+        const data = await reportService.getStats(selectedTournaments);
+        setStats(data);
       } catch (err) {
         setError('獲取統計數據失敗');
         console.error('Error fetching stats:', err);
@@ -252,7 +250,7 @@ const Reports = () => {
           </Grid>
 
           {/* 前5名最佳進步獎表格 */}
-          <Grid item xs={12} md={8}>
+          <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -285,7 +283,7 @@ const Reports = () => {
           </Grid>
 
           {/* 全勤獎表格 */}
-          <Grid item xs={12} md={4}>
+          <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
