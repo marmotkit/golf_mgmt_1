@@ -18,27 +18,22 @@ bp = Blueprint('scores', __name__)
 @bp.route('/', methods=['GET'])
 def get_scores():
     try:
-        tournament_id = request.args.get('tournament_id')
+        tournament_id = request.args.get('tournament_id', type=int)
         if not tournament_id:
-            return jsonify({'error': '未提供賽事ID'}), 400
+            return jsonify({'error': '必須提供賽事ID'}), 400
             
         scores = Score.query.filter_by(tournament_id=tournament_id).all()
         return jsonify([score.to_dict() for score in scores])
-        
     except Exception as e:
         current_app.logger.error(f"獲取成績時發生錯誤: {str(e)}")
-        current_app.logger.error(traceback.format_exc())
-        return jsonify({
-            'error': '獲取成績失敗',
-            'details': str(e)
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 @bp.route('/scores/<int:id>', methods=['GET'])
 def get_score(id):
     score = Score.query.get_or_404(id)
     return jsonify(score.to_dict())
 
-@bp.route('/scores/import/<int:tournament_id>', methods=['POST'])
+@bp.route('/import/<int:tournament_id>', methods=['POST'])
 def import_scores(tournament_id):
     temp_path = None
     try:
@@ -193,7 +188,7 @@ def import_scores(tournament_id):
         except Exception as e:
             current_app.logger.error(f'清理臨時檔案時發生錯誤：{str(e)}')
 
-@bp.route('/scores', methods=['POST'])
+@bp.route('/', methods=['POST'])
 def create_score():
     data = request.get_json()
     score = Score()
@@ -202,7 +197,7 @@ def create_score():
     db.session.commit()
     return jsonify(score.to_dict()), 201
 
-@bp.route('/scores/<int:id>', methods=['PUT'])
+@bp.route('/<int:id>', methods=['PUT'])
 def update_score(id):
     score = Score.query.get_or_404(id)
     data = request.get_json()
@@ -210,14 +205,14 @@ def update_score(id):
     db.session.commit()
     return jsonify(score.to_dict())
 
-@bp.route('/scores/<int:id>', methods=['DELETE'])
+@bp.route('/<int:id>', methods=['DELETE'])
 def delete_score(id):
     score = Score.query.get_or_404(id)
     db.session.delete(score)
     db.session.commit()
     return '', 204
 
-@bp.route('/scores/clear', methods=['POST'])
+@bp.route('/clear', methods=['POST'])
 def clear_scores():
     try:
         Score.query.delete()
