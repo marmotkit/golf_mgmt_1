@@ -191,8 +191,12 @@ function Scores() {
 
   const fetchTournaments = async () => {
     try {
-      const response = await tournamentService.getAllTournaments();
-      setTournaments(response);
+      const data = await tournamentService.getAllTournaments();
+      // 按照日期升冪排序（從早到晚）
+      const sortedTournaments = data.sort((a, b) => 
+        new Date(a.date) - new Date(b.date)
+      );
+      setTournaments(sortedTournaments);
     } catch (error) {
       console.error('Error fetching tournaments:', error);
     }
@@ -298,20 +302,23 @@ function Scores() {
   };
 
   const sortData = (data) => {
-    return data.sort((a, b) => {
-      let valueA = a[orderBy];
-      let valueB = b[orderBy];
+    if (!orderBy) return data;
 
-      // 處理特殊欄位的排序邏輯
-      if (orderBy === 'gender') {
-        valueA = a[orderBy] === 'F' ? 0 : 1;
-        valueB = b[orderBy] === 'F' ? 0 : 1;
-      }
-
-      if (order === 'desc') {
-        return valueB < valueA ? -1 : valueB > valueA ? 1 : 0;
+    return [...data].sort((a, b) => {
+      if (orderBy === 'rank' || orderBy === 'gross_score' || orderBy === 'net_score' || 
+          orderBy === 'previous_handicap' || orderBy === 'new_handicap' || orderBy === 'handicap_change' || 
+          orderBy === 'points') {
+        // 數值型欄位的升冪排序
+        const aValue = a[orderBy] === null ? Infinity : a[orderBy];
+        const bValue = b[orderBy] === null ? Infinity : b[orderBy];
+        return order === 'asc' ? aValue - bValue : bValue - aValue;
       } else {
-        return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
+        // 文字型欄位的升冪排序
+        const aValue = a[orderBy] || '';
+        const bValue = b[orderBy] || '';
+        return order === 'asc' ? 
+          aValue.localeCompare(bValue, 'zh-TW') : 
+          bValue.localeCompare(aValue, 'zh-TW');
       }
     });
   };

@@ -38,7 +38,11 @@ const Awards = () => {
     const fetchTournaments = async () => {
       try {
         const data = await tournamentService.getAllTournaments();
-        setTournaments(data);
+        // 按照日期升冪排序（從早到晚）
+        const sortedTournaments = data.sort((a, b) => 
+          new Date(a.date) - new Date(b.date)
+        );
+        setTournaments(sortedTournaments);
       } catch (error) {
         showMessage(error.message, 'error');
       }
@@ -56,11 +60,23 @@ const Awards = () => {
   const fetchAwards = async () => {
     setLoading(true);
     try {
-      const [awardsData, typesData] = await Promise.all([
-        awardService.getTournamentAwards(selectedTournament),
-        awardService.getAwardTypes()
-      ]);
-      setAwards(awardsData);
+      if (!selectedTournament) return;
+      const awards = await awardService.getTournamentAwards(selectedTournament);
+      // 按照 award_type_id 和 rank 升冪排序
+      const sortedAwards = awards.sort((a, b) => {
+        // 先按照獎項類型排序
+        if (a.award_type_id !== b.award_type_id) {
+          return a.award_type_id - b.award_type_id;
+        }
+        // 如果獎項類型相同，再按照名次排序（如果有的話）
+        if (a.rank !== null && b.rank !== null) {
+          return a.rank - b.rank;
+        }
+        // 如果沒有名次，則維持原有順序
+        return 0;
+      });
+      setAwards(sortedAwards);
+      const typesData = await awardService.getAwardTypes();
       setAwardTypes(typesData);
       
       // 初始化輸入框
