@@ -20,6 +20,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -87,12 +88,14 @@ const Login = () => {
               required
               fullWidth
               id="account"
-              label="帳號"
+              label="英文姓名"
               name="account"
-              autoComplete="off"
+              autoComplete="account"
               autoFocus
               value={formData.account}
               onChange={handleChange}
+              error={!!errors.account}
+              helperText={errors.account}
             />
             <TextField
               margin="normal"
@@ -100,10 +103,13 @@ const Login = () => {
               fullWidth
               name="member_number"
               label="會員編號"
+              type="text"
               id="member_number"
-              autoComplete="off"
+              autoComplete="member_number"
               value={formData.member_number}
               onChange={handleChange}
+              error={!!errors.member_number}
+              helperText={errors.member_number}
             />
             <Button
               type="submit"

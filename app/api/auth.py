@@ -21,9 +21,9 @@ def login():
                 'error': '請提供帳號和會員編號'
             }), 400
             
-        account = data['account']
+        english_name = data['account']  # 使用英文姓名作為帳號
         member_number = data['member_number']
-        logger.info(f"嘗試登入 - 帳號: {account}, 會員編號: {member_number}")
+        logger.info(f"嘗試登入 - 英文姓名: {english_name}, 會員編號: {member_number}")
         
         # 檢查資料庫連接
         try:
@@ -40,57 +40,44 @@ def login():
         # 查找會員
         try:
             member = Member.query.filter_by(
-                account=account,
+                english_name=english_name,
                 member_number=member_number
             ).first()
             
             if member:
-                logger.info(f"找到會員: id={member.id}, name={member.chinese_name}")
-            else:
-                logger.warning(f"未找到會員 - 帳號: {account}, 會員編號: {member_number}")
-                # 檢查是否有任何會員
-                total_members = Member.query.count()
-                logger.info(f"資料庫中總會員數: {total_members}")
+                logger.info(f"找到會員: id={member.id}, name={member.chinese_name}, is_admin={member.is_admin}")
                 
-                # 如果沒有會員，創建管理員帳號
-                if total_members == 0:
-                    logger.info("資料庫中沒有會員，創建管理員帳號")
-                    member = Member(
-                        account="admin",
-                        member_number="A001",
-                        chinese_name="系統管理員",
-                        is_admin=True,
-                        english_name="Admin",
-                        department_class="ADMIN",
-                        gender="M"
-                    )
-                    db.session.add(member)
-                    db.session.commit()
-                    logger.info("已創建管理員帳號")
-                else:
+                # 檢查是否為管理員
+                if not member.is_admin:
+                    logger.warning(f"會員 {member.chinese_name} 不是管理員")
                     return jsonify({
-                        'error': '帳號或會員編號錯誤'
-                    }), 401
-            
-            # 創建 JWT token
-            identity = {
-                'id': member.id,
-                'account': member.account,
-                'member_number': member.member_number,
-                'chinese_name': member.chinese_name,
-                'is_admin': member.is_admin
-            }
-            logger.info(f"創建 JWT token，用戶身份: {identity}")
-            
-            access_token = create_access_token(identity=identity)
-            logger.info("JWT token 創建成功")
-            
-            response_data = {
-                'access_token': access_token,
-                'user': identity
-            }
-            logger.info("登入成功，返回用戶數據")
-            return jsonify(response_data)
+                        'error': '您沒有管理員權限'
+                    }), 403
+                
+                # 創建 JWT token
+                identity = {
+                    'id': member.id,
+                    'account': member.english_name,
+                    'member_number': member.member_number,
+                    'chinese_name': member.chinese_name,
+                    'is_admin': member.is_admin
+                }
+                logger.info(f"創建 JWT token，用戶身份: {identity}")
+                
+                access_token = create_access_token(identity=identity)
+                logger.info("JWT token 創建成功")
+                
+                response_data = {
+                    'access_token': access_token,
+                    'user': identity
+                }
+                logger.info("登入成功，返回用戶數據")
+                return jsonify(response_data)
+            else:
+                logger.warning(f"未找到會員 - 英文姓名: {english_name}, 會員編號: {member_number}")
+                return jsonify({
+                    'error': '帳號或會員編號錯誤'
+                }), 401
             
         except Exception as e:
             logger.error(f"查詢會員時發生錯誤: {str(e)}")
