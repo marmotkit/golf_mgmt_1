@@ -6,7 +6,7 @@
   },
   "proxies": {
     "/api/": {
-      "origin": "https://golf-mgmt-1.onrender.com/api/",
+      "origin": "https://golf-mgmt-1.onrender.com/",
       "forward_headers": true
     }
   },
