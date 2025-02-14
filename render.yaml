@@ -7,8 +7,8 @@ services:
     headers:
       - path: /*
         name: Cache-Control
-        value: no-cache
+        value: no-store
     routes:
       - type: rewrite
-        source: /**
+        source: /.*
         destination: /index.html 
