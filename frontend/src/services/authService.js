@@ -6,10 +6,16 @@ export const login = async (credentials) => {
     console.log('開始登入嘗試，時間:', new Date().toISOString());
     console.log('登入憑證:', {
       account: credentials.account,
-      passwordLength: credentials.password ? credentials.password.length : 0
+      member_number: credentials.member_number
     });
 
-    const response = await axios.post('/auth/login', credentials);
+    // 確保使用正確的欄位名稱
+    const loginData = {
+      account: credentials.account,
+      member_number: credentials.member_number || credentials.password // 向後兼容
+    };
+
+    const response = await axios.post('/auth/login', loginData);
     console.log('登入響應狀態:', response.status);
     console.log('登入響應頭:', response.headers);
     console.log('登入響應數據:', {
