@@ -313,9 +313,9 @@ function Scores() {
         const bValue = b[orderBy] === null ? Infinity : b[orderBy];
         return order === 'asc' ? aValue - bValue : bValue - aValue;
       } else {
-        // 文字型欄位的升冪排序
-        const aValue = a[orderBy] || '';
-        const bValue = b[orderBy] || '';
+        // 文字型欄位的升冪排序，確保轉換為字串
+        const aValue = (a[orderBy] || '').toString();
+        const bValue = (b[orderBy] || '').toString();
         return order === 'asc' ? 
           aValue.localeCompare(bValue, 'zh-TW') : 
           bValue.localeCompare(aValue, 'zh-TW');
