@@ -1,10 +1,10 @@
 import axios from 'axios';
 import config from '../config';
 
-console.log('Creating axios instance with baseURL:', config.apiBaseUrl);
+console.log('Creating axios instance with baseURL:', `${config.apiBaseUrl}/api`);
 
 const instance = axios.create({
-  baseURL: config.apiBaseUrl,
+  baseURL: `${config.apiBaseUrl}/api`,
   timeout: 30000,  // 增加超時時間到 30 秒
   withCredentials: true,
   headers: {
