@@ -5,9 +5,15 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    
+    # 優先使用 RENDER_POSTGRES_URL（Render.com 內部服務 URL）
+    SQLALCHEMY_DATABASE_URI = os.environ.get('RENDER_POSTGRES_URL') or os.environ.get('DATABASE_URL')
+    
+    # 如果 URL 以 postgres:// 開頭，轉換為 postgresql://
     if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith('postgres://'):
         SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace('postgres://', 'postgresql://', 1)
+    
+    # 如果沒有設置資料庫 URL，使用 SQLite
     if not SQLALCHEMY_DATABASE_URI:
         SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app.db')
     
