@@ -2,25 +2,24 @@
   "root": "build/",
   "clean_urls": false,
   "routes": {
-    "/api/*": "https://golf-mgmt-1.onrender.com/api/:splat",
     "/**": "index.html"
-  },
-  "headers": {
-    "/**": {
-      "Cache-Control": "no-store",
-      "X-Frame-Options": "DENY",
-      "X-XSS-Protection": "1; mode=block",
-      "X-Content-Type-Options": "nosniff"
-    },
-    "/api/*": {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-    }
   },
   "proxies": {
     "/api/": {
-      "origin": "https://golf-mgmt-1.onrender.com/api/"
+      "origin": "https://golf-mgmt-1.onrender.com/api/",
+      "forward_headers": true
+    }
+  },
+  "headers": {
+    "/**": {
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "X-Frame-Options": "DENY",
+      "X-XSS-Protection": "1; mode=block",
+      "X-Content-Type-Options": "nosniff",
+      "Access-Control-Allow-Origin": "https://golf-mgmt-1-frontend.onrender.com",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+      "Access-Control-Allow-Credentials": "true"
     }
   }
 } 

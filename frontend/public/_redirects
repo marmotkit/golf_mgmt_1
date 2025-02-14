@@ -1,3 +1,3 @@
-/* /index.html 200
-/api/* https://golf-mgmt-1.onrender.com/api/:splat 200
-/static/* /static/:splat 200 
+/*    /index.html   200
+/api/*  https://golf-mgmt-1.onrender.com/api/:splat  200
+/static/*  /static/:splat  200 
