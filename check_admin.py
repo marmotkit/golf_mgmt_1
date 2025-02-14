@@ -3,6 +3,7 @@ from app.models import Member
 import logging
 import traceback
 from sqlalchemy import text, inspect
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -11,10 +12,21 @@ def check_admin():
     app = create_app()
     with app.app_context():
         try:
+            # 記錄環境變數
+            logger.info("環境變數:")
+            logger.info(f"FLASK_ENV: {os.getenv('FLASK_ENV')}")
+            logger.info(f"DATABASE_URL: {os.getenv('DATABASE_URL')}")
+            logger.info(f"RENDER_POSTGRES_URL: {os.getenv('RENDER_POSTGRES_URL')}")
+            
+            # 記錄應用配置
+            logger.info("應用配置:")
+            logger.info(f"SQLALCHEMY_DATABASE_URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+            
             # 檢查資料庫連接
             logger.info("正在檢查資料庫連接...")
             try:
-                db.session.execute(text('SELECT 1'))
+                result = db.session.execute(text('SELECT version()')).scalar()
+                logger.info(f"資料庫版本: {result}")
                 logger.info("資料庫連接正常")
             except Exception as e:
                 logger.error(f"資料庫連接錯誤: {str(e)}")
@@ -29,6 +41,12 @@ def check_admin():
             if 'member' not in tables:
                 logger.error("member 表不存在！")
                 return
+            
+            # 檢查 member 表結構
+            columns = inspector.get_columns('member')
+            logger.info("member 表結構:")
+            for column in columns:
+                logger.info(f"- {column['name']}: {column['type']}")
             
             # 檢查所有會員
             logger.info("正在查詢所有會員...")
