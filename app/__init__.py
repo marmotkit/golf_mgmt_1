@@ -6,6 +6,7 @@ import logging
 import sys
 from sqlalchemy import text, inspect
 import traceback
+from flask_jwt_extended import JWTManager
 
 # 配置日誌
 logging.basicConfig(
@@ -44,6 +45,9 @@ def check_database_connection(app):
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    
+    # 初始化 JWT
+    jwt = JWTManager(app)
     
     # 記錄配置信息
     logger.info('Starting application...')
@@ -195,7 +199,7 @@ def create_app(config_class=Config):
 
     # 註冊 API 藍圖
     try:
-        from app.api import members, tournaments, scores, games, reports, dashboard, version, awards
+        from app.api import members, tournaments, scores, games, reports, dashboard, version, awards, auth
         app.register_blueprint(members.bp, url_prefix='/api/members')  
         app.register_blueprint(tournaments.bp, url_prefix='/api/tournaments')  
         app.register_blueprint(scores.bp, url_prefix='/api/scores')  
@@ -204,6 +208,7 @@ def create_app(config_class=Config):
         app.register_blueprint(dashboard.bp, url_prefix='/api/dashboard')  
         app.register_blueprint(version.bp, url_prefix='/api/version')  
         app.register_blueprint(awards.bp, url_prefix='/api/awards')
+        app.register_blueprint(auth.bp, url_prefix='/api/auth')
         logger.info('All blueprints registered')
     except Exception as e:
         logger.error(f'Error registering blueprints: {str(e)}')

@@ -10,9 +10,13 @@ const instance = axios.create({
   },
 });
 
-// 添加請求攔截器
+// 請求攔截器
 instance.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     console.log('Making request:', config.method?.toUpperCase(), config.url);
     console.log('Request headers:', config.headers);
     return config;
@@ -23,13 +27,16 @@ instance.interceptors.request.use(
   }
 );
 
-// 添加響應攔截器
+// 響應攔截器
 instance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    if (error.response) {
+    if (error.response?.status === 401) {
+      // 如果是認證錯誤，清除本地存儲並重定向到登入頁
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    } else if (error.response) {
       // 服務器回應了錯誤狀態碼
       console.error('Response error:', {
         status: error.response.status,

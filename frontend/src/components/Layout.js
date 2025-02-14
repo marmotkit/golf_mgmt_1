@@ -13,6 +13,7 @@ import {
   Typography,
   useTheme,
   Container,
+  Divider,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,7 +25,9 @@ import {
   SportsEsports as GameIcon,
   BarChart as BarChartIcon,
   EmojiEventsOutlined as AwardIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
+import { logout } from '../services/authService';
 
 const drawerWidth = 240;
 
@@ -43,9 +46,15 @@ function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const drawer = (
@@ -67,6 +76,15 @@ function Layout() {
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
+      </List>
+      <Divider />
+      <List>
+        <ListItem button onClick={handleLogout}>
+          <ListItemIcon>
+            <LogoutIcon />
+          </ListItemIcon>
+          <ListItemText primary="登出" />
+        </ListItem>
       </List>
     </div>
   );
@@ -90,8 +108,13 @@ function Layout() {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            {menuItems.find(item => item.path === location.pathname)?.text || '首頁'}
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6" noWrap component="div">
+              {menuItems.find(item => item.path === location.pathname)?.text || '首頁'}
+            </Typography>
+          </Box>
+          <Typography variant="body1" sx={{ mr: 2 }}>
+            {user.chinese_name || ''}
           </Typography>
         </Toolbar>
       </AppBar>
