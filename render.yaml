@@ -10,5 +10,10 @@ services:
         value: no-store
     routes:
       - type: rewrite
-        source: /.*
-        destination: /index.html 
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.0
+      - key: REACT_APP_API_URL
+        value: https://golf-mgmt-1.onrender.com 
