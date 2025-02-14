@@ -9,7 +9,9 @@ const instance = axios.create({
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
-  },
+    'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  }
 });
 
 // 請求攔截器
@@ -19,12 +21,22 @@ instance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // 添加時間戳防止快取
+    if (config.method === 'get') {
+      config.params = {
+        ...config.params,
+        _t: Date.now()
+      };
+    }
+    
     console.log('Making request:', {
       method: config.method?.toUpperCase(),
       url: config.url,
       baseURL: config.baseURL,
       headers: config.headers,
-      data: config.data
+      data: config.data,
+      withCredentials: config.withCredentials
     });
     return config;
   },
@@ -39,38 +51,36 @@ instance.interceptors.response.use(
   (response) => {
     console.log('Response received:', {
       status: response.status,
-      data: response.data,
-      headers: response.headers
+      statusText: response.statusText,
+      headers: response.headers,
+      data: response.data
     });
     return response;
   },
   (error) => {
     if (error.response?.status === 401) {
       // 如果是認證錯誤，清除本地存儲並重定向到登入頁
+      console.log('Authentication error, redirecting to login...');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
-    } else if (error.response) {
-      // 服務器回應了錯誤狀態碼
-      console.error('Response error:', {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers,
-        config: error.config
-      });
-    } else if (error.request) {
-      // 請求已發出，但沒有收到響應
-      console.error('No response received:', {
-        request: error.request,
-        config: error.config
-      });
-    } else {
-      // 請求設置時發生錯誤
-      console.error('Request setup error:', {
-        message: error.message,
-        config: error.config
-      });
     }
+    
+    console.error('Response error:', {
+      message: error.message,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL,
+        headers: error.config?.headers,
+        withCredentials: error.config?.withCredentials
+      }
+    });
+    
     return Promise.reject(error);
   }
 );

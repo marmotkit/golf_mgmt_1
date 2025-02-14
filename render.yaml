@@ -7,7 +7,7 @@ services:
     headers:
       - path: /*
         name: Cache-Control
-        value: no-store
+        value: no-store, no-cache, must-revalidate
       - path: /*
         name: X-Frame-Options
         value: DENY
@@ -17,6 +17,18 @@ services:
       - path: /*
         name: X-Content-Type-Options
         value: nosniff
+      - path: /*
+        name: Access-Control-Allow-Origin
+        value: https://golf-mgmt-1-frontend.onrender.com
+      - path: /*
+        name: Access-Control-Allow-Methods
+        value: GET, POST, PUT, DELETE, OPTIONS
+      - path: /*
+        name: Access-Control-Allow-Headers
+        value: Origin, X-Requested-With, Content-Type, Accept, Authorization
+      - path: /*
+        name: Access-Control-Allow-Credentials
+        value: "true"
     routes:
       - type: rewrite
         source: /api/*

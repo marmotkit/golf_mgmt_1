@@ -9,11 +9,16 @@ const apiBaseUrl = process.env.NODE_ENV === 'development'
 // 確保 URL 結尾沒有斜線
 const normalizeUrl = (url) => url.replace(/\/+$/, '');
 
-console.log(`Golf Management App ${VERSION} - Using API:`, apiBaseUrl);
+// 日誌輸出當前配置
+console.log('Golf Management App Configuration:');
+console.log(`Version: ${VERSION}`);
+console.log(`Environment: ${process.env.NODE_ENV}`);
+console.log(`API URL: ${apiBaseUrl}`);
 
 const config = {
     apiBaseUrl: normalizeUrl(apiBaseUrl),
-    VERSION
+    VERSION,
+    isDevelopment: process.env.NODE_ENV === 'development'
 };
 
 export default config;
