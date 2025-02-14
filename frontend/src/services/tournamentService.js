@@ -29,7 +29,7 @@ const handleError = (error) => {
 // 获取所有赛事
 export const getAllTournaments = async () => {
   try {
-    const response = await api.get('/tournaments');
+    const response = await axios.get('/api/tournaments');
     return response.data;
   } catch (error) {
     handleError(error);
@@ -39,7 +39,7 @@ export const getAllTournaments = async () => {
 // 获取单个赛事
 export const getTournament = async (id) => {
   try {
-    const response = await api.get(`/tournaments/${id}`);
+    const response = await axios.get(`/api/tournaments/${id}`);
     return response.data;
   } catch (error) {
     handleError(error);
@@ -49,7 +49,7 @@ export const getTournament = async (id) => {
 // 创建赛事
 export const createTournament = async (tournamentData) => {
   try {
-    const response = await api.post('/tournaments', tournamentData);
+    const response = await axios.post('/api/tournaments', tournamentData);
     return response.data;
   } catch (error) {
     handleError(error);
@@ -59,7 +59,7 @@ export const createTournament = async (tournamentData) => {
 // 更新赛事
 export const updateTournament = async (id, tournamentData) => {
   try {
-    const response = await api.put(`/tournaments/${id}`, tournamentData);
+    const response = await axios.put(`/api/tournaments/${id}`, tournamentData);
     return response.data;
   } catch (error) {
     handleError(error);
@@ -69,7 +69,7 @@ export const updateTournament = async (id, tournamentData) => {
 // 删除赛事
 export const deleteTournament = async (id) => {
   try {
-    await api.delete(`/tournaments/${id}`);
+    await axios.delete(`/api/tournaments/${id}`);
   } catch (error) {
     handleError(error);
   }
