@@ -59,20 +59,20 @@ def create_app(config_class=Config):
         if request.method == "OPTIONS":
             response = app.make_default_options_response()
         
-        if request.headers.get("Origin") == "https://golf-mgmt-1-frontend.onrender.com":
-            response.headers.pop("Access-Control-Allow-Origin", None)
-            response.headers.pop("Access-Control-Allow-Methods", None)
-            response.headers.pop("Access-Control-Allow-Headers", None)
-            response.headers.pop("Access-Control-Allow-Credentials", None)
+        # 允許所有來源的請求（開發階段）
+        response.headers.pop("Access-Control-Allow-Origin", None)
+        response.headers.pop("Access-Control-Allow-Methods", None)
+        response.headers.pop("Access-Control-Allow-Headers", None)
+        response.headers.pop("Access-Control-Allow-Credentials", None)
+        
+        response.headers.set("Access-Control-Allow-Origin", request.headers.get("Origin", "*"))
+        response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+        response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
+        response.headers.set("Access-Control-Allow-Credentials", "true")
+        
+        if request.method == "OPTIONS":
+            response.headers.set("Access-Control-Max-Age", "3600")
             
-            response.headers.set("Access-Control-Allow-Origin", "https://golf-mgmt-1-frontend.onrender.com")
-            response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-            response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin")
-            response.headers.set("Access-Control-Allow-Credentials", "true")
-            
-            if request.method == "OPTIONS":
-                response.headers.set("Access-Control-Max-Age", "3600")
-                
         return response
         
     logger.info('CORS configured')
