@@ -158,7 +158,7 @@ def process_excel_data(df):
                     errors.extend(row_errors)
                 else:
                     valid_rows.append(row)
-                    
+                
             except Exception as e:
                 logger.error(f'處理第 {idx + 2} 行時發生異常：{str(e)}')
                 logger.error(f'該行資料內容：{row.to_dict()}')
@@ -309,7 +309,7 @@ def upload_members():
                     'error_messages': ['上傳的 Excel 檔案沒有任何資料'],
                     'success_count': 0
                 }), 400
-
+                
             # 檢查必要欄位
             required_columns = {
                 '會員編號': ['會員編號', '會員號碼'],
@@ -345,7 +345,7 @@ def upload_members():
                     'error_messages': [error_msg],
                     'success_count': 0
                 }), 400
-
+                
             # 重命名欄位以統一處理
             df = df.rename(columns={v: k for k, v in column_mapping.items()})
 
@@ -396,7 +396,7 @@ def upload_members():
                     'error_messages': error_messages,
                     'success_count': 0
                 }), 400
-
+            
             # 處理有效的資料
             version_number = generate_version_number()
             
@@ -452,11 +452,11 @@ def upload_members():
             try:
                 db.session.commit()
                 logger.info(f'Successfully processed {success_count} members')
-                return jsonify({
+            return jsonify({
                     'message': '上傳成功',
                     'version': version_number,
-                    'success_count': success_count
-                })
+                'success_count': success_count
+            })
             except Exception as e:
                 db.session.rollback()
                 logger.error(f'Error committing changes: {str(e)}')
@@ -483,7 +483,7 @@ def upload_members():
                 'error_messages': [str(e)],
                 'success_count': 0
             }), 400
-
+            
     except Exception as e:
         error_msg = f'系統錯誤：{str(e)}'
         logger.error(error_msg)
@@ -596,90 +596,82 @@ def update_member(member_id):
         if 'id' in data:
             del data['id']
             
-        try:
-            # 更新會員資料
-            if 'member_number' in data:
-                if str(data['member_number']) != str(member.member_number):
-                    existing = Member.query.filter_by(member_number=str(data['member_number'])).first()
-                    if existing and existing.id != member_id:
-                        return jsonify({'error': f"會員編號 {data['member_number']} 已存在"}), 400
-                member.member_number = str(data['member_number'])
-                
-            if 'account' in data:
-                member.account = str(data['account'])
-                
-            if 'chinese_name' in data:
-                member.chinese_name = str(data['chinese_name'])
-                
-            if 'english_name' in data:
-                member.english_name = str(data['english_name'])
-                
-            if 'department_class' in data:
-                member.department_class = str(data['department_class'])
-                
-            if 'is_guest' in data:
-                member.is_guest = bool(data['is_guest'])
-                
-            if 'is_admin' in data:
-                member.is_admin = bool(data['is_admin'])
-                
-            if 'gender' in data:
-                member.gender = str(data['gender'])
-                
-            if 'handicap' in data:
-                try:
-                    handicap_value = data['handicap']
-                    logger.info(f'Processing handicap value: {handicap_value} (type: {type(handicap_value)})')
-                    if handicap_value is None or handicap_value == '':
-                        member.handicap = None
-                        logger.info('Setting handicap to None')
-                    else:
-                        try:
-                            member.handicap = float(handicap_value)
-                            logger.info(f'Setting handicap to {member.handicap}')
-                        except (ValueError, TypeError) as e:
-                            logger.error(f'Failed to convert handicap to float: {str(e)}')
-                            return jsonify({'error': f'差點必須是數字，收到的值為: {handicap_value}'}), 400
-                except Exception as e:
-                    logger.error(f'Error processing handicap: {str(e)}')
-                    logger.error(traceback.format_exc())
-                    return jsonify({'error': f'處理差點時發生錯誤: {str(e)}'}), 400
+        # 更新會員資料
+        if 'member_number' in data:
+            if str(data['member_number']) != str(member.member_number):
+                existing = Member.query.filter_by(member_number=str(data['member_number'])).first()
+                if existing and existing.id != member_id:
+                    return jsonify({'error': f"會員編號 {data['member_number']} 已存在"}), 400
+            member.member_number = str(data['member_number'])
             
-            # 創建新版本
+        if 'account' in data:
+            member.account = str(data['account'])
+            
+        if 'chinese_name' in data:
+            member.chinese_name = str(data['chinese_name'])
+            
+        if 'english_name' in data:
+            member.english_name = str(data['english_name'])
+            
+        if 'department_class' in data:
+            member.department_class = str(data['department_class'])
+            
+        if 'is_guest' in data:
+            member.is_guest = bool(data['is_guest'])
+            
+        if 'is_admin' in data:
+            member.is_admin = bool(data['is_admin'])
+            
+        if 'gender' in data:
+            member.gender = str(data['gender'])
+            
+        if 'handicap' in data:
             try:
-                member_data = member.to_dict()
-                version_data = {k: v for k, v in member_data.items() if k not in ['created_at', 'updated_at']}
-                
-                version_number = generate_version_number()
-                logger.info(f'Generated version number: {version_number}')
-                logger.info(f'Version data: {version_data}')
-                
-                version = MemberVersion(
-                    member=member,
-                    version=version_number,
-                    data=version_data,
-                    created_at=datetime.now()
-                )
-                db.session.add(version)
-                
-                logger.info('Committing changes to database')
-                db.session.commit()
-                logger.info(f'Successfully updated member {member_id}')
-                return jsonify({
-                    'message': '更新成功',
-                    'data': version_data
-                })
+                handicap_value = data['handicap']
+                logger.info(f'Processing handicap value: {handicap_value} (type: {type(handicap_value)})')
+                if handicap_value is None or handicap_value == '':
+                    member.handicap = None
+                    logger.info('Setting handicap to None')
+                else:
+                    try:
+                        member.handicap = float(handicap_value)
+                        logger.info(f'Setting handicap to {member.handicap}')
+                    except (ValueError, TypeError) as e:
+                        logger.error(f'Failed to convert handicap to float: {str(e)}')
+                        return jsonify({'error': f'差點必須是數字，收到的值為: {handicap_value}'}), 400
             except Exception as e:
-                logger.error(f'Error creating version: {str(e)}')
+                logger.error(f'Error processing handicap: {str(e)}')
                 logger.error(traceback.format_exc())
-                db.session.rollback()
-                return jsonify({'error': f'創建版本失敗: {str(e)}'}), 400
+                return jsonify({'error': f'處理差點時發生錯誤: {str(e)}'}), 400
+        
+        try:
+            # 獲取最新版本
+            latest_version = db.session.query(MemberVersion)\
+                .filter_by(member_id=member_id)\
+                .order_by(MemberVersion.version.desc())\
+                .first()
             
+            if not latest_version:
+                logger.error(f'No version found for member {member_id}')
+                return jsonify({'error': f'找不到會員 {member_id} 的版本資料'}), 404
+            
+            # 更新當前版本的資料
+            member_data = member.to_dict()
+            version_data = {k: v for k, v in member_data.items() if k not in ['created_at', 'updated_at']}
+            latest_version.data = version_data
+            
+            logger.info('Committing changes to database')
+            db.session.commit()
+            logger.info(f'Successfully updated member {member_id}')
+            return jsonify({
+                'message': '更新成功',
+                'data': version_data
+            })
         except Exception as e:
-            db.session.rollback()
-            logger.error(f'Database error while updating: {str(e)}')
+            logger.error(f'Error updating version: {str(e)}')
             logger.error(traceback.format_exc())
-            return jsonify({'error': f'資料庫更新失敗: {str(e)}'}), 400
+            db.session.rollback()
+            return jsonify({'error': f'更新版本失敗: {str(e)}'}), 400
             
     except Exception as e:
         logger.error(f"更新會員失敗: {str(e)}")
