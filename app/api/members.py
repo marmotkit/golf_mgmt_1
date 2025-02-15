@@ -452,11 +452,11 @@ def upload_members():
             try:
                 db.session.commit()
                 logger.info(f'Successfully processed {success_count} members')
-            return jsonify({
+                return jsonify({
                     'message': '上傳成功',
                     'version': version_number,
-                'success_count': success_count
-            })
+                    'success_count': success_count
+                })
             except Exception as e:
                 db.session.rollback()
                 logger.error(f'Error committing changes: {str(e)}')
@@ -644,38 +644,33 @@ def update_member(member_id):
                 logger.error(traceback.format_exc())
                 return jsonify({'error': f'處理差點時發生錯誤: {str(e)}'}), 400
         
-        try:
-            # 獲取最新版本
-            latest_version = db.session.query(MemberVersion)\
-                .filter_by(member_id=member_id)\
-                .order_by(MemberVersion.version.desc())\
-                .first()
-            
-            if not latest_version:
-                logger.error(f'No version found for member {member_id}')
-                return jsonify({'error': f'找不到會員 {member_id} 的版本資料'}), 404
-            
-            # 更新當前版本的資料
-            member_data = member.to_dict()
-            version_data = {k: v for k, v in member_data.items() if k not in ['created_at', 'updated_at']}
-            latest_version.data = version_data
-            
-            logger.info('Committing changes to database')
-            db.session.commit()
-            logger.info(f'Successfully updated member {member_id}')
-            return jsonify({
-                'message': '更新成功',
-                'data': version_data
-            })
-        except Exception as e:
-            logger.error(f'Error updating version: {str(e)}')
-            logger.error(traceback.format_exc())
-            db.session.rollback()
-            return jsonify({'error': f'更新版本失敗: {str(e)}'}), 400
+        # 獲取最新版本
+        latest_version = db.session.query(MemberVersion)\
+            .filter_by(member_id=member_id)\
+            .order_by(MemberVersion.version.desc())\
+            .first()
+        
+        if not latest_version:
+            logger.error(f'No version found for member {member_id}')
+            return jsonify({'error': f'找不到會員 {member_id} 的版本資料'}), 404
+        
+        # 更新當前版本的資料
+        member_data = member.to_dict()
+        version_data = {k: v for k, v in member_data.items() if k not in ['created_at', 'updated_at']}
+        latest_version.data = version_data
+        
+        logger.info('Committing changes to database')
+        db.session.commit()
+        logger.info(f'Successfully updated member {member_id}')
+        return jsonify({
+            'message': '更新成功',
+            'data': version_data
+        })
             
     except Exception as e:
         logger.error(f"更新會員失敗: {str(e)}")
         logger.error(traceback.format_exc())
+        db.session.rollback()
         return jsonify({'error': str(e)}), 400
 
 @bp.route('/<int:id>', methods=['DELETE'])
