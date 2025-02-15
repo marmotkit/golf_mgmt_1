@@ -468,7 +468,12 @@ const Members = () => {
       );
       
       console.log('Update Response:', response.data);
-      fetchMembers();
+      
+      // 先重新獲取版本列表
+      await fetchVersions();
+      // 然後重新獲取會員資料
+      await fetchMembers();
+      
       setEditDialogOpen(false);
       setSnackbar({ open: true, message: '更新成功', severity: 'success' });
     } catch (error) {
