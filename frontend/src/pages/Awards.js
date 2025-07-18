@@ -57,6 +57,34 @@ const Awards = () => {
     }
   }, [selectedTournament]);
 
+  // 頁面載入時獲取所有獎項數據（用於總桿冠軍歷月表列）
+  useEffect(() => {
+    const fetchAllAwards = async () => {
+      setLoading(true);
+      try {
+        // 獲取所有賽事的獎項數據，以支援歷月表列功能
+        const allAwards = await awardService.getAllTournamentAwards();
+        setAwards(allAwards);
+        
+        const typesData = await awardService.getAwardTypes();
+        setAwardTypes(typesData);
+        
+        // 初始化輸入框
+        const inputs = {};
+        typesData.forEach(type => {
+          inputs[type.id] = '';
+        });
+        setWinnerInputs(inputs);
+      } catch (error) {
+        showMessage(error.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAllAwards();
+  }, []);
+
   const fetchAwards = async () => {
     setLoading(true);
     try {
@@ -145,122 +173,6 @@ const Awards = () => {
     if (!awardType) return null;
 
     const typeAwards = awards.filter(a => a.award_type_id === awardType.id);
-
-    // 特殊處理總桿冠軍 - 移到最上面並修正當月顯示邏輯
-    if (awardType.name === '總桿冠軍') {
-      // 獲取當前選中賽事的總桿冠軍（只取第一個）
-      const currentTournamentAward = typeAwards.find(a => a.tournament_id === parseInt(selectedTournament));
-      
-      return (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>{awardType.name}</Typography>
-          
-          {/* 當前賽事的總桿冠軍 - 只顯示一個 */}
-          {currentTournamentAward && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom color="primary">
-                當前賽事得獎者
-              </Typography>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={4} lg={3}>
-                  <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Box>
-                      <Typography>{currentTournamentAward.chinese_name}</Typography>
-                      {currentTournamentAward.remarks && (
-                        <Typography variant="body2" color="text.secondary">
-                          {currentTournamentAward.remarks}
-                        </Typography>
-                      )}
-                    </Box>
-                    <IconButton 
-                      edge="end" 
-                      onClick={() => handleDeleteWinner(currentTournamentAward.id)}
-                      size="small"
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-
-          {/* 月份總桿冠軍表列 */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" gutterBottom color="primary">
-              歷月總桿冠軍表列
-            </Typography>
-            <Paper sx={{ p: 2 }}>
-              <Grid container spacing={2}>
-                {tournaments.map((tournament) => {
-                  const tournamentAwards = awards.filter(a => 
-                    a.award_type_id === awardType.id && 
-                    a.tournament_id === tournament.id
-                  );
-                  
-                  if (tournamentAwards.length === 0) return null;
-                  
-                  // 只取第一個得獎者（總桿冠軍通常只有一個）
-                  const firstAward = tournamentAwards[0];
-                  
-                  return (
-                    <Grid item xs={12} sm={6} md={4} lg={3} key={tournament.id}>
-                      <Paper 
-                        sx={{ 
-                          p: 2, 
-                          border: '1px solid #e0e0e0',
-                          backgroundColor: '#fafafa'
-                        }}
-                      >
-                        <Typography variant="subtitle2" gutterBottom color="text.secondary">
-                          {tournament.name}
-                        </Typography>
-                        <Box 
-                          sx={{ 
-                            display: 'flex', 
-                            justifyContent: 'space-between', 
-                            alignItems: 'center',
-                            mt: 1
-                          }}
-                        >
-                          <Typography variant="body2">
-                            {firstAward.chinese_name}
-                          </Typography>
-                          <IconButton 
-                            edge="end" 
-                            onClick={() => handleDeleteWinner(firstAward.id)}
-                            size="small"
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Box>
-                      </Paper>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            </Paper>
-          </Box>
-
-          {/* 新增總桿冠軍的輸入框 */}
-          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-            <TextField
-              size="small"
-              value={winnerInputs[awardType.id] || ''}
-              onChange={handleInputChange(awardType.id)}
-              placeholder="輸入得獎者姓名"
-              autoComplete="off"
-            />
-            <Button
-              variant="contained"
-              onClick={() => handleAddWinner(awardType.id)}
-            >
-              新增
-            </Button>
-          </Box>
-        </Box>
-      );
-    }
 
     // 特殊處理淨桿獎
     if (awardType.name === '淨桿獎') {
@@ -382,6 +294,63 @@ const Awards = () => {
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>獎項管理</Typography>
 
+      {/* 總桿冠軍歷月表列 - 直接顯示在最上面 */}
+      <Paper sx={{ p: 3, mb: 3 }}>
+        <Typography variant="h6" gutterBottom>總桿冠軍歷月表列</Typography>
+        <Grid container spacing={2}>
+          {tournaments.map((tournament) => {
+            const tournamentAwards = awards.filter(a => {
+              // 找到總桿冠軍獎項類型
+              const grossChampionType = awardTypes.find(type => type.name === '總桿冠軍');
+              if (!grossChampionType) return false;
+              
+              return a.award_type_id === grossChampionType.id && 
+                     a.tournament_id === tournament.id;
+            });
+            
+            if (tournamentAwards.length === 0) return null;
+            
+            // 只取第一個得獎者（總桿冠軍通常只有一個）
+            const firstAward = tournamentAwards[0];
+            
+            return (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={tournament.id}>
+                <Paper 
+                  sx={{ 
+                    p: 2, 
+                    border: '1px solid #e0e0e0',
+                    backgroundColor: '#fafafa'
+                  }}
+                >
+                  <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                    {tournament.name}
+                  </Typography>
+                  <Box 
+                    sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      mt: 1
+                    }}
+                  >
+                    <Typography variant="body2">
+                      {firstAward.chinese_name}
+                    </Typography>
+                    <IconButton 
+                      edge="end" 
+                      onClick={() => handleDeleteWinner(firstAward.id)}
+                      size="small"
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Paper>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Paper>
+
       <FormControl sx={{ mb: 4, minWidth: 300 }}>
         <InputLabel>選擇賽事</InputLabel>
         <Select
@@ -400,13 +369,7 @@ const Awards = () => {
       {selectedTournament && (
         <Paper sx={{ p: 3 }}>
           {awardTypes
-            .sort((a, b) => {
-              // 總桿冠軍優先顯示在最上面
-              if (a.name === '總桿冠軍') return -1;
-              if (b.name === '總桿冠軍') return 1;
-              // 其他獎項按原有順序
-              return 0;
-            })
+            .filter(awardType => awardType.name !== '總桿冠軍') // 過濾掉總桿冠軍，因為已經在上面顯示了
             .map(awardType => (
               <React.Fragment key={awardType.id}>
                 {renderAwardSection(awardType)}
