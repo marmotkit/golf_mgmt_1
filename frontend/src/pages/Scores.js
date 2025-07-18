@@ -23,10 +23,14 @@ import {
   Collapse,
   IconButton,
   TableSortLabel,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import SearchIcon from '@mui/icons-material/Search';
+import ClearIcon from '@mui/icons-material/Clear';
 import axios from '../utils/axios';
 import { useSnackbar } from 'notistack';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -122,6 +126,8 @@ function Scores() {
   const [tournaments, setTournaments] = useState([]);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [scores, setScores] = useState([]);
+  const [filteredScores, setFilteredScores] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedTournaments, setSelectedTournaments] = useState([]);
@@ -210,9 +216,34 @@ function Scores() {
         id: index,
       }));
       setScores(scoresWithId);
+      setFilteredScores(scoresWithId);
     } catch (error) {
       console.error('Error fetching scores:', error);
     }
+  };
+
+  // 搜尋功能
+  const handleSearch = (event) => {
+    const term = event.target.value;
+    setSearchTerm(term);
+    
+    if (!term.trim()) {
+      setFilteredScores(scores);
+      return;
+    }
+
+    const filtered = scores.filter(score => 
+      score.member_number?.toString().includes(term) ||
+      score.full_name?.toLowerCase().includes(term.toLowerCase()) ||
+      score.chinese_name?.toLowerCase().includes(term.toLowerCase())
+    );
+    setFilteredScores(filtered);
+  };
+
+  // 清除搜尋
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setFilteredScores(scores);
   };
 
   const handleTabChange = (event, newValue) => {
@@ -419,9 +450,44 @@ function Scores() {
                 </Typography>
               </Box>
 
+              {/* 搜尋功能 */}
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder="搜尋會員編號、姓名或HOLE..."
+                  value={searchTerm}
+                  onChange={handleSearch}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchTerm && (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={handleClearSearch}
+                          edge="end"
+                        >
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ maxWidth: 400 }}
+                />
+                {searchTerm && (
+                  <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                    找到 {filteredScores.length} 筆符合的成績記錄
+                  </Typography>
+                )}
+              </Box>
+
               <Box sx={{ height: 400, width: '100%' }}>
                 <DataGrid
-                  rows={scores}
+                  rows={filteredScores}
                   columns={columns}
                   pageSize={5}
                   rowsPerPageOptions={[5]}
