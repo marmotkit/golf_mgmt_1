@@ -128,10 +128,12 @@ function Scores() {
   const [scores, setScores] = useState([]);
   const [filteredScores, setFilteredScores] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [annualStats, setAnnualStats] = useState([]);
+  const [filteredAnnualStats, setFilteredAnnualStats] = useState([]);
+  const [annualSearchTerm, setAnnualSearchTerm] = useState('');
   const [openUploadDialog, setOpenUploadDialog] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedTournaments, setSelectedTournaments] = useState([]);
-  const [annualStats, setAnnualStats] = useState([]);
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('total_points');
   const { enqueueSnackbar } = useSnackbar();
@@ -246,6 +248,30 @@ function Scores() {
     setFilteredScores(scores);
   };
 
+  // 年度總成績搜尋功能
+  const handleAnnualSearch = (event) => {
+    const term = event.target.value;
+    setAnnualSearchTerm(term);
+    
+    if (!term.trim()) {
+      setFilteredAnnualStats(annualStats);
+      return;
+    }
+
+    const filtered = annualStats.filter(stat => 
+      stat.name?.toLowerCase().includes(term.toLowerCase()) ||
+      stat.full_name?.toLowerCase().includes(term.toLowerCase()) ||
+      stat.member_number?.toString().includes(term)
+    );
+    setFilteredAnnualStats(filtered);
+  };
+
+  // 清除年度總成績搜尋
+  const handleClearAnnualSearch = () => {
+    setAnnualSearchTerm('');
+    setFilteredAnnualStats(annualStats);
+  };
+
   const handleTabChange = (event, newValue) => {
     setValue(newValue);
   };
@@ -308,6 +334,7 @@ function Scores() {
     try {
       const response = await scoreService.calculateAnnualStats(selectedTournaments);
       setAnnualStats(response);
+      setFilteredAnnualStats(response);
     } catch (error) {
       console.error('Error calculating annual stats:', error);
       if (error.response?.data?.error) {
@@ -520,27 +547,64 @@ function Scores() {
           </Box>
 
           {annualStats.length > 0 && (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell />
-                    {renderSortLabel('name', '姓名')}
-                    {renderSortLabel('gender', '性別')}
-                    {renderSortLabel('full_name', '級別')}
-                    {renderSortLabel('avg_gross_score', '總桿平均', 'right')}
-                    {renderSortLabel('participation_count', '參與次數', 'right')}
-                    {renderSortLabel('avg_handicap', '差點平均', 'right')}
-                    {renderSortLabel('total_points', '年度積分', 'right')}
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {sortData([...annualStats]).map((row) => (
-                    <AnnualScoreRow key={row.member_number} row={row} />
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <>
+              {/* 年度總成績搜尋功能 */}
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder="搜尋姓名、級別或會員編號..."
+                  value={annualSearchTerm}
+                  onChange={handleAnnualSearch}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                    endAdornment: annualSearchTerm && (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={handleClearAnnualSearch}
+                          edge="end"
+                        >
+                          <ClearIcon />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ maxWidth: 400 }}
+                />
+                {annualSearchTerm && (
+                  <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
+                    找到 {filteredAnnualStats.length} 筆符合的年度成績記錄
+                  </Typography>
+                )}
+              </Box>
+
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell />
+                      {renderSortLabel('name', '姓名')}
+                      {renderSortLabel('gender', '性別')}
+                      {renderSortLabel('full_name', '級別')}
+                      {renderSortLabel('avg_gross_score', '總桿平均', 'right')}
+                      {renderSortLabel('participation_count', '參與次數', 'right')}
+                      {renderSortLabel('avg_handicap', '差點平均', 'right')}
+                      {renderSortLabel('total_points', '年度積分', 'right')}
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {sortData([...filteredAnnualStats]).map((row) => (
+                      <AnnualScoreRow key={row.member_number} row={row} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
         </TabPanel>
       </Paper>
