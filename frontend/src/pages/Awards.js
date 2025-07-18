@@ -96,14 +96,8 @@ const Awards = () => {
       // 獲取所有賽事的獎項數據（用於總桿冠軍歷月表列）
       const allAwards = await awardService.getAllTournamentAwards();
       
-      // 合併數據：當前賽事的獎項 + 所有賽事的獎項（用於歷月表列）
-      const combinedAwards = [...allAwards];
-      
-      // 更新當前賽事的獎項數據
-      const currentAwards = combinedAwards.filter(a => a.tournament_id !== parseInt(selectedTournament));
-      combinedAwards.splice(0, combinedAwards.length, ...currentAwards, ...tournamentAwards);
-      
-      setAwards(combinedAwards);
+      // 設置獎項數據：當前賽事的獎項用於顯示，所有獎項用於歷月表列
+      setAwards(allAwards); // 保持所有獎項用於歷月表列
       
       const typesData = await awardService.getAwardTypes();
       setAwardTypes(typesData);
@@ -183,21 +177,22 @@ const Awards = () => {
   const renderAwardSection = (awardType) => {
     if (!awardType) return null;
 
-    const typeAwards = awards.filter(a => a.award_type_id === awardType.id);
+    // 只獲取當前選中賽事的獎項
+    const typeAwards = awards.filter(a => 
+      a.award_type_id === awardType.id && 
+      a.tournament_id === parseInt(selectedTournament)
+    );
 
     // 特殊處理總桿冠軍 - 只顯示當前選中賽事的總桿冠軍
     if (awardType.name === '總桿冠軍') {
-      // 只獲取當前選中賽事的總桿冠軍
-      const currentTournamentAwards = typeAwards.filter(a => a.tournament_id === parseInt(selectedTournament));
-      
       return (
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>{awardType.name}</Typography>
           
           {/* 當前賽事的總桿冠軍 */}
-          {currentTournamentAwards.length > 0 && (
+          {typeAwards.length > 0 && (
             <Grid container spacing={2}>
-              {currentTournamentAwards.map(award => (
+              {typeAwards.map(award => (
                 <Grid item xs={12} sm={6} md={4} lg={3} key={award.id}>
                   <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Box>
