@@ -85,12 +85,15 @@ def get_tournament_awards():
         tournament_id = request.args.get('tournament_id', type=int)
         logger.info(f'賽事ID: {tournament_id}')
         
-        if not tournament_id:
-            logger.error('未提供賽事ID')
-            return jsonify({'error': '必須提供賽事ID'}), 400
+        if tournament_id:
+            # 如果提供了賽事ID，只返回該賽事的獎項
+            logger.info(f'查詢賽事 {tournament_id} 的獎項')
+            awards = TournamentAward.query.filter_by(tournament_id=tournament_id).all()
+        else:
+            # 如果沒有提供賽事ID，返回所有獎項
+            logger.info('查詢所有賽事的獎項')
+            awards = TournamentAward.query.all()
             
-        logger.info(f'查詢賽事 {tournament_id} 的獎項')
-        awards = TournamentAward.query.filter_by(tournament_id=tournament_id).all()
         logger.info(f'找到 {len(awards)} 個獎項')
         
         result = []

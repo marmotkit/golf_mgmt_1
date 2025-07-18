@@ -61,21 +61,11 @@ const Awards = () => {
     setLoading(true);
     try {
       if (!selectedTournament) return;
-      const awards = await awardService.getTournamentAwards(selectedTournament);
-      // 按照 award_type_id 和 rank 升冪排序
-      const sortedAwards = awards.sort((a, b) => {
-        // 先按照獎項類型排序
-        if (a.award_type_id !== b.award_type_id) {
-          return a.award_type_id - b.award_type_id;
-        }
-        // 如果獎項類型相同，再按照名次排序（如果有的話）
-        if (a.rank !== null && b.rank !== null) {
-          return a.rank - b.rank;
-        }
-        // 如果沒有名次，則維持原有順序
-        return 0;
-      });
-      setAwards(sortedAwards);
+      
+      // 獲取所有賽事的獎項數據，以支援歷月表列功能
+      const allAwards = await awardService.getAllTournamentAwards();
+      setAwards(allAwards);
+      
       const typesData = await awardService.getAwardTypes();
       setAwardTypes(typesData);
       
@@ -212,6 +202,121 @@ const Awards = () => {
               );
             })}
           </Grid>
+        </Box>
+      );
+    }
+
+    // 特殊處理總桿冠軍 - 添加月份表列
+    if (awardType.name === '總桿冠軍') {
+      return (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>{awardType.name}</Typography>
+          
+          {/* 當前賽事的總桿冠軍 */}
+          {typeAwards.length > 0 && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" gutterBottom color="primary">
+                當前賽事得獎者
+              </Typography>
+              <Grid container spacing={2}>
+                {typeAwards.map(award => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={award.id}>
+                    <Paper sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Box>
+                        <Typography>{award.chinese_name}</Typography>
+                        {award.remarks && (
+                          <Typography variant="body2" color="text.secondary">
+                            {award.remarks}
+                          </Typography>
+                        )}
+                      </Box>
+                      <IconButton 
+                        edge="end" 
+                        onClick={() => handleDeleteWinner(award.id)}
+                        size="small"
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Paper>
+                  </Grid>
+                ))}
+              </Grid>
+            </Box>
+          )}
+
+          {/* 月份總桿冠軍表列 */}
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle1" gutterBottom color="primary">
+              歷月總桿冠軍表列
+            </Typography>
+            <Paper sx={{ p: 2 }}>
+              <Grid container spacing={2}>
+                {tournaments.map((tournament) => {
+                  const tournamentAwards = awards.filter(a => 
+                    a.award_type_id === awardType.id && 
+                    a.tournament_id === tournament.id
+                  );
+                  
+                  if (tournamentAwards.length === 0) return null;
+                  
+                  return (
+                    <Grid item xs={12} sm={6} md={4} lg={3} key={tournament.id}>
+                      <Paper 
+                        sx={{ 
+                          p: 2, 
+                          border: '1px solid #e0e0e0',
+                          backgroundColor: '#fafafa'
+                        }}
+                      >
+                        <Typography variant="subtitle2" gutterBottom color="text.secondary">
+                          {tournament.name}
+                        </Typography>
+                        {tournamentAwards.map(award => (
+                          <Box 
+                            key={award.id} 
+                            sx={{ 
+                              display: 'flex', 
+                              justifyContent: 'space-between', 
+                              alignItems: 'center',
+                              mt: 1
+                            }}
+                          >
+                            <Typography variant="body2">
+                              {award.chinese_name}
+                            </Typography>
+                            <IconButton 
+                              edge="end" 
+                              onClick={() => handleDeleteWinner(award.id)}
+                              size="small"
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ))}
+                      </Paper>
+                    </Grid>
+                  );
+                })}
+              </Grid>
+            </Paper>
+          </Box>
+
+          {/* 新增總桿冠軍的輸入框 */}
+          <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+            <TextField
+              size="small"
+              value={winnerInputs[awardType.id] || ''}
+              onChange={handleInputChange(awardType.id)}
+              placeholder="輸入得獎者姓名"
+              autoComplete="off"
+            />
+            <Button
+              variant="contained"
+              onClick={() => handleAddWinner(awardType.id)}
+            >
+              新增
+            </Button>
+          </Box>
         </Box>
       );
     }

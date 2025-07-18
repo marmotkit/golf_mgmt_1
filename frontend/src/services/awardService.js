@@ -25,6 +25,18 @@ export const getTournamentAwards = async (tournamentId) => {
   }
 };
 
+// 獲取所有賽事的獎項數據
+export const getAllTournamentAwards = async () => {
+  try {
+    console.log('Requesting all tournament awards');
+    const response = await axios.get('/awards/');
+    console.log('All tournament awards response:', response);
+    return response.data;
+  } catch (error) {
+    handleError(error);
+  }
+};
+
 // 創建賽事獎項
 export const createTournamentAward = async (awardData) => {
   try {
