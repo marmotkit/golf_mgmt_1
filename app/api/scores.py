@@ -728,6 +728,70 @@ def export_annual_stats():
         for row_num in range(2, ws.max_row + 1):
             ws.row_dimensions[row_num].height = 20
         
+        # 創建第二個工作表：賽事詳情
+        ws2 = wb.create_sheet(title="賽事詳情")
+        
+        # 設定標題
+        detail_headers = ['會員編號', '姓名', '性別', '級別', '賽事名稱', '新差點', '總桿', '淨桿', '淨桿名次', '積分']
+        ws2.append(detail_headers)
+        
+        # 設定標題行樣式
+        for col_num, header in enumerate(detail_headers, 1):
+            cell = ws2.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+            cell.border = thin_border
+        
+        # 填入賽事詳情資料（展開所有會員的賽事）
+        for row_data in result:
+            member_number = row_data['member_number'] or ''
+            member_name = row_data['name'] or ''
+            member_gender = '女' if row_data['gender'] == 'F' else '男'
+            member_full_name = row_data['full_name'] or ''
+            
+            # 為每個會員的每個賽事添加一行
+            for tournament in row_data['tournaments']:
+                row = [
+                    member_number,
+                    member_name,
+                    member_gender,
+                    member_full_name,
+                    tournament['tournament_name'] or '',
+                    round(tournament['new_handicap'], 1) if tournament['new_handicap'] is not None else '',
+                    tournament['gross_score'] if tournament['gross_score'] is not None else '',
+                    round(tournament['net_score'], 1) if tournament['net_score'] is not None else '',
+                    tournament['rank'] if tournament['rank'] is not None else '',
+                    tournament['points'] if tournament['points'] is not None else ''
+                ]
+                ws2.append(row)
+                
+                # 設定資料行樣式
+                for col_num in range(1, len(detail_headers) + 1):
+                    cell = ws2.cell(row=ws2.max_row, column=col_num)
+                    cell.font = data_font
+                    cell.alignment = data_alignment
+                    cell.border = thin_border
+        
+        # 自動調整第二個工作表的欄寬
+        for col_num, header in enumerate(detail_headers, 1):
+            max_length = len(header)
+            for row in ws2.iter_rows(min_row=2, max_row=ws2.max_row, min_col=col_num, max_col=col_num):
+                for cell in row:
+                    if cell.value:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+            adjusted_width = min(max_length + 2, 50)
+            ws2.column_dimensions[get_column_letter(col_num)].width = adjusted_width
+        
+        # 設定第二個工作表的行高
+        ws2.row_dimensions[1].height = 25
+        for row_num in range(2, ws2.max_row + 1):
+            ws2.row_dimensions[row_num].height = 20
+        
         # 建立檔案緩衝區
         output = BytesIO()
         wb.save(output)
