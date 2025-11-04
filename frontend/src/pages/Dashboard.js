@@ -312,26 +312,43 @@ const Dashboard = () => {
                 </Typography>
               </IconWrapper>
             </Box>
-            <Box sx={{ 
-              height: 300, 
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              pr: 1,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: '#f1f1f1',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#888',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb:hover': {
-                background: '#555',
-              },
-            }}>
+            <Box 
+              onWheel={(e) => {
+                const container = e.currentTarget;
+                const { scrollTop, scrollHeight, clientHeight } = container;
+                const isScrollingDown = e.deltaY > 0;
+                const isScrollingUp = e.deltaY < 0;
+                const isAtTop = scrollTop === 0;
+                const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
+                
+                if ((isScrollingDown && isAtBottom) || (isScrollingUp && isAtTop)) {
+                  // 如果已經滾動到頂部或底部，允許頁面滾動
+                  return;
+                }
+                // 否則阻止事件冒泡，只在列表內滾動
+                e.stopPropagation();
+              }}
+              sx={{ 
+                height: 300, 
+                overflowY: 'auto',
+                overflowX: 'hidden',
+                pr: 1,
+                position: 'relative',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#888',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: '#555',
+                },
+              }}>
               {stats.champions && stats.champions.length > 0 ? (
                 stats.champions.map((champion) => (
                   <Box key={champion.id} sx={{
