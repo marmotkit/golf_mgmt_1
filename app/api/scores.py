@@ -426,12 +426,25 @@ def get_annual_stats():
         tournament_names = {t.id: t.name for t in tournaments}
         
         # 按會員分組統計數據
-        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄（保留ID最大的，通常是最新的）
+        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
+        # 優先保留更新時間最新的，如果更新時間相同則保留ID最大的
         unique_scores = {}
         for score in scores:
             key = (score.member_number, score.tournament_id)
-            if key not in unique_scores or score.id > unique_scores[key].id:
+            if key not in unique_scores:
                 unique_scores[key] = score
+            else:
+                existing = unique_scores[key]
+                # 比較更新時間，保留最新的
+                if score.updated_at and existing.updated_at:
+                    if score.updated_at > existing.updated_at:
+                        unique_scores[key] = score
+                    elif score.updated_at == existing.updated_at and score.id > existing.id:
+                        unique_scores[key] = score
+                elif score.updated_at and not existing.updated_at:
+                    unique_scores[key] = score
+                elif not score.updated_at and not existing.updated_at and score.id > existing.id:
+                    unique_scores[key] = score
         
         stats = {}
         for (member_number, tournament_id), score in unique_scores.items():
@@ -608,12 +621,25 @@ def export_annual_stats():
         tournament_names = {t.id: t.name for t in tournaments}
         
         # 按會員分組統計數據（與 annual-stats 相同的邏輯）
-        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄（保留ID最大的，通常是最新的）
+        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
+        # 優先保留更新時間最新的，如果更新時間相同則保留ID最大的
         unique_scores = {}
         for score in scores:
             key = (score.member_number, score.tournament_id)
-            if key not in unique_scores or score.id > unique_scores[key].id:
+            if key not in unique_scores:
                 unique_scores[key] = score
+            else:
+                existing = unique_scores[key]
+                # 比較更新時間，保留最新的
+                if score.updated_at and existing.updated_at:
+                    if score.updated_at > existing.updated_at:
+                        unique_scores[key] = score
+                    elif score.updated_at == existing.updated_at and score.id > existing.id:
+                        unique_scores[key] = score
+                elif score.updated_at and not existing.updated_at:
+                    unique_scores[key] = score
+                elif not score.updated_at and not existing.updated_at and score.id > existing.id:
+                    unique_scores[key] = score
         
         stats = {}
         for (member_number, tournament_id), score in unique_scores.items():
