@@ -1,5 +1,10 @@
-from flask import Blueprint, jsonify, request, current_app
-from app.models import db, TournamentAward, AwardType
+from flask import Blueprint, jsonify, request, current_app, send_file
+from app.models import db, TournamentAward, AwardType, Tournament
+from datetime import datetime
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
+from io import BytesIO
 import logging
 import traceback
 
@@ -178,4 +183,122 @@ def batch_create_awards():
         db.session.rollback()
         logger.error(f"批量創建賽事獎項時發生錯誤: {str(e)}")
         logger.error(traceback.format_exc())
-        return jsonify({'error': str(e)}), 500 
+        return jsonify({'error': str(e)}), 500
+
+@bp.route('/export', methods=['GET'])
+def export_awards():
+    """匯出獎項資料為 Excel 檔案"""
+    try:
+        tournament_name = request.args.get('tournament_name', '')
+        
+        if not tournament_name:
+            return jsonify({'error': '請指定賽事名稱'}), 400
+        
+        logger.info(f'開始匯出賽事 "{tournament_name}" 的獎項資料')
+        
+        # 根據賽事名稱找到賽事
+        tournament = Tournament.query.filter_by(name=tournament_name).first()
+        if not tournament:
+            return jsonify({'error': '找不到指定的賽事'}), 404
+        
+        # 獲取該賽事的所有獎項
+        awards = TournamentAward.query.filter_by(tournament_id=tournament.id).all()
+        
+        if not awards:
+            return jsonify({'error': '沒有可匯出的資料'}), 404
+        
+        # 建立 Excel 工作簿
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "獎項管理"
+        
+        # 設定標題行樣式
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # 設定標題
+        headers = ['獎項類型', '得獎者姓名', '排名', '備註']
+        ws.append(headers)
+        
+        # 設定標題行樣式
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+            cell.border = thin_border
+        
+        # 填入資料
+        data_font = Font(size=11)
+        data_alignment = Alignment(horizontal="left", vertical="center")
+        
+        for award in awards:
+            # 獲取獎項類型名稱
+            award_type = AwardType.query.get(award.award_type_id)
+            award_type_name = award_type.name if award_type else '未知'
+            
+            row = [
+                award_type_name,
+                award.chinese_name or '',
+                award.rank if award.rank else '',
+                award.remarks or ''
+            ]
+            ws.append(row)
+            
+            # 設定資料行樣式
+            for col_num in range(1, len(headers) + 1):
+                cell = ws.cell(row=ws.max_row, column=col_num)
+                cell.font = data_font
+                cell.alignment = data_alignment
+                cell.border = thin_border
+        
+        # 自動調整欄寬
+        for col_num, header in enumerate(headers, 1):
+            max_length = len(header)
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=col_num, max_col=col_num):
+                for cell in row:
+                    if cell.value:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[get_column_letter(col_num)].width = adjusted_width
+        
+        # 設定行高
+        ws.row_dimensions[1].height = 25
+        for row_num in range(2, ws.max_row + 1):
+            ws.row_dimensions[row_num].height = 20
+        
+        # 建立檔案緩衝區
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # 產生檔案名稱
+        filename = f'獎項管理_{tournament_name}_{datetime.now().strftime("%Y%m%d")}.xlsx'
+        
+        logger.info(f'匯出成功，檔案名稱: {filename}')
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        logger.error(f"匯出獎項資料失敗: {str(e)}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            'error': '匯出獎項資料失敗',
+            'details': str(e)
+        }), 500 
