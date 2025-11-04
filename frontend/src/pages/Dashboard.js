@@ -313,9 +313,10 @@ const Dashboard = () => {
               </IconWrapper>
             </Box>
             <Box sx={{ 
-              maxHeight: 300, 
+              height: 300, 
               overflowY: 'auto',
               overflowX: 'hidden',
+              pr: 1,
               '&::-webkit-scrollbar': {
                 width: '8px',
               },
