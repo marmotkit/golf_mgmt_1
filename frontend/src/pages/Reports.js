@@ -129,9 +129,9 @@ const Reports = () => {
     }
   };
 
-  // 初始化時設置為當前年度（如果有的話）
+  // 初始化時自動設置為當前年度
   useEffect(() => {
-    if (availableYears.length > 0 && selectedYear === 'all' && tournaments.length > 0) {
+    if (availableYears.length > 0 && selectedYear === 'all') {
       const currentYear = new Date().getFullYear();
       if (availableYears.includes(currentYear)) {
         setSelectedYear(currentYear.toString());
@@ -140,7 +140,7 @@ const Reports = () => {
         setSelectedYear(availableYears[0].toString());
       }
     }
-  }, [availableYears, tournaments.length]);
+  }, [availableYears, selectedYear]);
 
   return (
     <Box p={3}>
