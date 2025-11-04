@@ -165,17 +165,16 @@ function Awards() {
           </Select>
         </FormControl>
 
-        {selectedTournament && (
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<FileDownloadIcon />}
-            onClick={handleExport}
-            disabled={loading || awards.length === 0}
-          >
-            匯出資料
-          </Button>
-        )}
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<FileDownloadIcon />}
+          onClick={handleExport}
+          disabled={!selectedTournament || loading || awards.length === 0}
+          sx={{ minWidth: 120 }}
+        >
+          匯出資料
+        </Button>
       </Box>
 
       {/* 獎項列表 */}
