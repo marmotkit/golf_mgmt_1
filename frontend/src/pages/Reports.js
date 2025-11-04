@@ -41,6 +41,8 @@ const Reports = () => {
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
   const [topPointsCount, setTopPointsCount] = useState(10);
+  const [topScoresCount, setTopScoresCount] = useState(10);
+  const [topImprovementsCount, setTopImprovementsCount] = useState(5);
 
   // 獲取賽事列表
   useEffect(() => {
@@ -246,24 +248,43 @@ const Reports = () => {
             </Card>
           </Grid>
 
-          {/* 前10名總桿數表格 */}
+          {/* 前N名總桿數表格 */}
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  前10名總桿數 (平均)
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    前{topScoresCount}名總桿數 (平均)
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>顯示前幾名</InputLabel>
+                    <Select
+                      value={topScoresCount}
+                      label="顯示前幾名"
+                      onChange={(e) => setTopScoresCount(e.target.value)}
+                    >
+                      <MenuItem value={5}>前5名</MenuItem>
+                      <MenuItem value={10}>前10名</MenuItem>
+                      <MenuItem value={15}>前15名</MenuItem>
+                      <MenuItem value={20}>前20名</MenuItem>
+                      <MenuItem value={30}>前30名</MenuItem>
+                      <MenuItem value={50}>前50名</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
                 <TableContainer component={Paper}>
                   <Table>
                     <TableHead>
                       <TableRow>
+                        <TableCell>名次</TableCell>
                         <TableCell>會員姓名</TableCell>
                         <TableCell align="right">總桿數</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {stats.top_scores.map((score, index) => (
+                      {stats.top_scores.slice(0, topScoresCount).map((score, index) => (
                         <TableRow key={index}>
+                          <TableCell>{index + 1}</TableCell>
                           <TableCell>{score.member_name}</TableCell>
                           <TableCell align="right">{score.gross_score}</TableCell>
                         </TableRow>
@@ -275,17 +296,35 @@ const Reports = () => {
             </Card>
           </Grid>
 
-          {/* 前5名最佳進步獎表格 */}
+          {/* 前N名最佳進步獎表格 */}
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  前5名最佳進步獎
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    前{topImprovementsCount}名最佳進步獎
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>顯示前幾名</InputLabel>
+                    <Select
+                      value={topImprovementsCount}
+                      label="顯示前幾名"
+                      onChange={(e) => setTopImprovementsCount(e.target.value)}
+                    >
+                      <MenuItem value={5}>前5名</MenuItem>
+                      <MenuItem value={10}>前10名</MenuItem>
+                      <MenuItem value={15}>前15名</MenuItem>
+                      <MenuItem value={20}>前20名</MenuItem>
+                      <MenuItem value={30}>前30名</MenuItem>
+                      <MenuItem value={50}>前50名</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
                 <TableContainer component={Paper} sx={{ height: 300 }}>
                   <Table stickyHeader size="small">
                     <TableHead>
                       <TableRow>
+                        <TableCell>名次</TableCell>
                         <TableCell>會員姓名</TableCell>
                         <TableCell align="right">初始差點</TableCell>
                         <TableCell align="right">最終差點</TableCell>
@@ -293,8 +332,9 @@ const Reports = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {stats.top_improvements.map((improvement, index) => (
+                      {stats.top_improvements.slice(0, topImprovementsCount).map((improvement, index) => (
                         <TableRow key={index}>
+                          <TableCell>{index + 1}</TableCell>
                           <TableCell>{improvement.member_name}</TableCell>
                           <TableCell align="right">{improvement.initial_handicap}</TableCell>
                           <TableCell align="right">{improvement.final_handicap}</TableCell>
@@ -320,12 +360,14 @@ const Reports = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell>會員姓名</TableCell>
+                        <TableCell align="right">參與次數</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {stats.perfect_attendance.map((member, index) => (
                         <TableRow key={index}>
                           <TableCell>{member.member_name}</TableCell>
+                          <TableCell align="right">{member.participation_count || 0}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

@@ -109,15 +109,16 @@ def get_stats():
             if scores  # 確保有數據才計算平均值
         }
 
+        # 獲取平均總桿數（完整列表，不限制數量）
         top_scores = [
             {'member_name': name, 'gross_score': avg_score}
             for name, avg_score in sorted(
                 avg_member_scores.items(),
                 key=lambda x: x[1]  # 由低到高排序
-            )[:10]
+            )
         ]
         
-        # 計算差點進步最多的前5名
+        # 計算差點進步最多的（完整列表，不限制數量）
         handicap_improvements = []
         for score in scores:
             if score.previous_handicap is not None and score.new_handicap is not None:
@@ -130,14 +131,14 @@ def get_stats():
                     'tournament_name': score.tournament.name
                 })
         
-        # 排序並獲取前5名進步者
+        # 排序並獲取進步者（完整列表）
         top_improvements = sorted(
             handicap_improvements,
             key=lambda x: x['improvement'],
             reverse=True
-        )[:5]
+        )
         
-        # 計算全勤獎
+        # 計算全勤獎（添加參與次數）
         member_attendance = {}
         tournament_count = len(tournament_ids)
         
@@ -147,7 +148,10 @@ def get_stats():
             member_attendance[score.chinese_name].add(score.tournament_id)
         
         perfect_attendance = [
-            {'member_name': name}
+            {
+                'member_name': name,
+                'participation_count': len(tournaments)
+            }
             for name, tournaments in member_attendance.items()
             if len(tournaments) == tournament_count  # 參加所有選擇的賽事
         ]
