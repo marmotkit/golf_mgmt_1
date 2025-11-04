@@ -312,27 +312,47 @@ const Dashboard = () => {
                 </Typography>
               </IconWrapper>
             </Box>
-            {stats.champions && stats.champions.length > 0 ? (
-              stats.champions.map((champion) => (
-                <Box key={champion.id} sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 1,
-                  p: 1,
-                  borderRadius: 1,
-                  '&:hover': { bgcolor: 'action.hover' }
-                }}>
-                  <Typography variant="body1">
-                    {champion.year}年度: {champion.tournament_name} - {champion.member_name} {champion.total_strokes}桿
-                  </Typography>
-                </Box>
-              ))
-            ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
-                目前沒有總桿冠軍記錄
-              </Typography>
-            )}
+            <Box sx={{ 
+              maxHeight: 300, 
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                background: '#f1f1f1',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: '#888',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb:hover': {
+                background: '#555',
+              },
+            }}>
+              {stats.champions && stats.champions.length > 0 ? (
+                stats.champions.map((champion) => (
+                  <Box key={champion.id} sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1,
+                    p: 1,
+                    borderRadius: 1,
+                    '&:hover': { bgcolor: 'action.hover' }
+                  }}>
+                    <Typography variant="body1">
+                      {champion.year}年度: {champion.tournament_name} - {champion.member_name}
+                    </Typography>
+                  </Box>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                  目前沒有總桿冠軍記錄
+                </Typography>
+              )}
+            </Box>
           </StatsCard>
         </Grid>
 
