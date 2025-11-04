@@ -427,7 +427,9 @@ def get_annual_stats():
         
         # 按會員分組統計數據
         # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
-        # 優先保留更新時間最新的，如果更新時間相同則保留ID最大的
+        # 使用與賽事成績頁面相同的邏輯：按更新時間和ID排序，保留最新的記錄
+        # 為了與賽事成績頁面保持一致，我們按(會員編號+賽事ID)去重，保留ID最大的記錄
+        # 但更準確的方式是：按更新時間最新的，如果更新時間相同則按ID最大的
         unique_scores = {}
         for score in scores:
             key = (score.member_number, score.tournament_id)
@@ -445,6 +447,9 @@ def get_annual_stats():
                     unique_scores[key] = score
                 elif not score.updated_at and not existing.updated_at and score.id > existing.id:
                     unique_scores[key] = score
+        
+        # 記錄去重後的記錄數
+        current_app.logger.info(f"去重後保留 {len(unique_scores)} 筆唯一記錄")
         
         stats = {}
         for (member_number, tournament_id), score in unique_scores.items():
@@ -622,7 +627,7 @@ def export_annual_stats():
         
         # 按會員分組統計數據（與 annual-stats 相同的邏輯）
         # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
-        # 優先保留更新時間最新的，如果更新時間相同則保留ID最大的
+        # 使用與賽事成績頁面相同的邏輯：按更新時間和ID排序，保留最新的記錄
         unique_scores = {}
         for score in scores:
             key = (score.member_number, score.tournament_id)
@@ -640,6 +645,9 @@ def export_annual_stats():
                     unique_scores[key] = score
                 elif not score.updated_at and not existing.updated_at and score.id > existing.id:
                     unique_scores[key] = score
+        
+        # 記錄去重後的記錄數
+        current_app.logger.info(f"去重後保留 {len(unique_scores)} 筆唯一記錄")
         
         stats = {}
         for (member_number, tournament_id), score in unique_scores.items():
