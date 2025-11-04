@@ -318,15 +318,21 @@ const Dashboard = () => {
                 const { scrollTop, scrollHeight, clientHeight } = container;
                 const isScrollingDown = e.deltaY > 0;
                 const isScrollingUp = e.deltaY < 0;
-                const isAtTop = scrollTop === 0;
-                const isAtBottom = scrollTop + clientHeight >= scrollHeight - 1;
                 
-                if ((isScrollingDown && isAtBottom) || (isScrollingUp && isAtTop)) {
-                  // 如果已經滾動到頂部或底部，允許頁面滾動
-                  return;
+                // 計算是否還有滾動空間
+                const canScrollDown = scrollTop + clientHeight < scrollHeight - 1;
+                const canScrollUp = scrollTop > 0;
+                
+                // 如果列表還能滾動，阻止事件冒泡
+                if ((isScrollingDown && canScrollDown) || (isScrollingUp && canScrollUp)) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  
+                  // 手動執行滾動
+                  const newScrollTop = scrollTop + e.deltaY;
+                  container.scrollTop = Math.max(0, Math.min(newScrollTop, scrollHeight - clientHeight));
                 }
-                // 否則阻止事件冒泡，只在列表內滾動
-                e.stopPropagation();
+                // 如果已經到達邊界，允許事件冒泡（讓頁面滾動）
               }}
               sx={{ 
                 height: 300, 
@@ -334,6 +340,7 @@ const Dashboard = () => {
                 overflowX: 'hidden',
                 pr: 1,
                 position: 'relative',
+                overscrollBehavior: 'contain', // 防止滾動鏈
                 '&::-webkit-scrollbar': {
                   width: '8px',
                 },

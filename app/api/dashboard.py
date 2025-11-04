@@ -58,10 +58,11 @@ def get_dashboard_stats():
             
             if tournament_ids:
                 # 獲取這些賽事中「總桿冠軍」類型的獎項
+                # 按賽事日期降序排列（最新的在前），不限制數量
                 awards = TournamentAward.query.filter(
                     TournamentAward.award_type_id == gross_champion_type.id,
                     TournamentAward.tournament_id.in_(tournament_ids)
-                ).order_by(TournamentAward.created_at.desc()).limit(5).all()
+                ).join(Tournament).order_by(Tournament.date.desc()).all()
                 
                 # 格式化為冠軍榜格式
                 for award in awards:
