@@ -1,66 +1,28 @@
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:5000/api';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 添加请求拦截器
-api.interceptors.request.use(
-  (config) => {
-    console.log('Request:', config);
-    return config;
-  },
-  (error) => {
-    console.error('Request Error:', error);
-    return Promise.reject(error);
-  }
-);
-
-// 添加响应拦截器
-api.interceptors.response.use(
-  (response) => {
-    console.log('Response:', response);
-    return response;
-  },
-  (error) => {
-    console.error('Response Error:', error);
-    if (error.response) {
-      console.error('Error Data:', error.response.data);
-      console.error('Error Status:', error.response.status);
-      console.error('Error Headers:', error.response.headers);
-    }
-    return Promise.reject(error);
-  }
-);
+import axios from '../utils/axios';
 
 // 賽事管理 API
 export const tournamentsApi = {
-  getAll: () => api.get('/tournaments'),
-  getById: (id) => api.get(`/tournaments/${id}`),
-  create: (data) => api.post('/tournaments', data),
-  update: (id, data) => api.put(`/tournaments/${id}`, data),
-  delete: (id) => api.delete(`/tournaments/${id}`),
+  getAll: () => axios.get('/tournaments'),
+  getById: (id) => axios.get(`/tournaments/${id}`),
+  create: (data) => axios.post('/tournaments', data),
+  update: (id, data) => axios.put(`/tournaments/${id}`, data),
+  delete: (id) => axios.delete(`/tournaments/${id}`),
 };
 
 // 成績管理 API
 export const scoresApi = {
-  getAll: () => api.get('/scores'),
-  getById: (id) => api.get(`/scores/${id}`),
-  create: (data) => api.post('/scores', data),
-  update: (id, data) => api.put(`/scores/${id}`, data),
-  delete: (id) => api.delete(`/scores/${id}`),
+  getAll: () => axios.get('/scores'),
+  getById: (id) => axios.get(`/scores/${id}`),
+  create: (data) => axios.post('/scores', data),
+  update: (id, data) => axios.put(`/scores/${id}`, data),
+  delete: (id) => axios.delete(`/scores/${id}`),
 };
 
 // 報表分析 API
 export const reportsApi = {
-  getTournamentStats: () => api.get('/reports/tournaments'),
-  getPlayerStats: () => api.get('/reports/players'),
-  getScoreStats: () => api.get('/reports/scores'),
+  getTournamentStats: () => axios.get('/reports/tournaments'),
+  getPlayerStats: () => axios.get('/reports/players'),
+  getScoreStats: () => axios.get('/reports/scores'),
 };
 
-export default api;
+export default axios;

@@ -83,10 +83,10 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         const [statsResponse, announcementsResponse, versionResponse, descriptionResponse] = await Promise.all([
-          axios.get('/api/dashboard/stats'),
-          axios.get('/api/dashboard/announcements'),
-          axios.get('/api/version'),
-          axios.get('/api/version/description'),
+          axios.get('/dashboard/stats'),
+          axios.get('/dashboard/announcements'),
+          axios.get('/version'),
+          axios.get('/version/description'),
         ]);
 
         setStats(statsResponse.data);
@@ -133,7 +133,7 @@ const Dashboard = () => {
 
     const newVersion = `V${newMajor}.${newMinor}`;
     try {
-      await axios.post('/api/version', { version: newVersion });
+      await axios.post('/version', { version: newVersion });
       setVersion(newVersion);
     } catch (error) {
       console.error('Error updating version:', error);
@@ -169,11 +169,11 @@ const Dashboard = () => {
   const handleChampionSubmit = async () => {
     try {
       if (editingChampion) {
-        await axios.put(`/api/dashboard/champions/${editingChampion.id}`, championForm);
+        await axios.put(`/dashboard/champions/${editingChampion.id}`, championForm);
       } else {
-        await axios.post('/api/dashboard/champions', championForm);
+        await axios.post('/dashboard/champions', championForm);
       }
-      const response = await axios.get('/api/dashboard/stats');
+      const response = await axios.get('/dashboard/stats');
       setStats(response.data);
       handleChampionDialogClose();
     } catch (error) {
@@ -184,8 +184,8 @@ const Dashboard = () => {
   const handleChampionDelete = async (id) => {
     if (window.confirm('確定要刪除這筆記錄嗎？')) {
       try {
-        await axios.delete(`/api/dashboard/champions/${id}`);
-        const response = await axios.get('/api/dashboard/stats');
+        await axios.delete(`/dashboard/champions/${id}`);
+        const response = await axios.get('/dashboard/stats');
         setStats(response.data);
       } catch (error) {
         console.error('Error deleting champion:', error);
@@ -216,11 +216,11 @@ const Dashboard = () => {
   const handleAnnouncementSubmit = async () => {
     try {
       if (editingAnnouncement) {
-        await axios.put(`/api/dashboard/announcements/${editingAnnouncement.id}`, announcementForm);
+        await axios.put(`/dashboard/announcements/${editingAnnouncement.id}`, announcementForm);
       } else {
-        await axios.post('/api/dashboard/announcements', announcementForm);
+        await axios.post('/dashboard/announcements', announcementForm);
       }
-      const response = await axios.get('/api/dashboard/announcements');
+      const response = await axios.get('/dashboard/announcements');
       setAnnouncements(response.data);
       handleAnnouncementDialogClose();
     } catch (error) {
@@ -231,8 +231,8 @@ const Dashboard = () => {
   const handleAnnouncementDelete = async (id) => {
     if (window.confirm('確定要刪除這則公告嗎？')) {
       try {
-        await axios.delete(`/api/dashboard/announcements/${id}`);
-        const response = await axios.get('/api/dashboard/announcements');
+        await axios.delete(`/dashboard/announcements/${id}`);
+        const response = await axios.get('/dashboard/announcements');
         setAnnouncements(response.data);
       } catch (error) {
         console.error('Error deleting announcement:', error);
@@ -243,7 +243,7 @@ const Dashboard = () => {
   const handleDescriptionEdit = async () => {
     if (isEditingDescription) {
       try {
-        await axios.post('/api/version/description', { description: editedDescription });
+        await axios.post('/version/description', { description: editedDescription });
         setVersionDescription(editedDescription);
       } catch (error) {
         console.error('Error updating version description:', error);

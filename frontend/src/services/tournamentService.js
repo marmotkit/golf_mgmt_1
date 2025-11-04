@@ -1,74 +1,65 @@
-import axios from 'axios';
+import axios from '../utils/axios';
 
-const API_BASE_URL = 'http://localhost:5000/api';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// 错误处理函数
+// 錯誤處理函數
 const handleError = (error) => {
   if (error.response) {
-    // 服务器返回错误响应
-    const errorMessage = error.response.data.error || error.response.data.message || '操作失败';
+    // 服務器返回錯誤響應
+    const errorMessage = error.response.data.error || error.response.data.message || '操作失敗';
     const errorDetails = error.response.data.details || error.response.data.traceback || '';
     throw new Error(`${errorMessage}\n${errorDetails}`);
   } else if (error.request) {
-    // 请求已发送但没有收到响应
-    throw new Error('无法连接到服务器，请检查网络连接');
+    // 請求已發送但沒有收到響應
+    throw new Error('無法連接到服務器，請檢查網絡連接');
   } else {
-    // 请求配置出错
-    throw new Error('请求配置错误');
+    // 請求配置錯誤
+    throw new Error('請求配置錯誤');
   }
 };
 
-// 获取所有赛事
+// 獲取所有賽事
 export const getAllTournaments = async () => {
   try {
-    const response = await api.get('/tournaments');
+    const response = await axios.get('/tournaments');
     return response.data;
   } catch (error) {
     handleError(error);
   }
 };
 
-// 获取单个赛事
+// 獲取單個賽事
 export const getTournament = async (id) => {
   try {
-    const response = await api.get(`/tournaments/${id}`);
+    const response = await axios.get(`/tournaments/${id}`);
     return response.data;
   } catch (error) {
     handleError(error);
   }
 };
 
-// 创建赛事
+// 創建賽事
 export const createTournament = async (tournamentData) => {
   try {
-    const response = await api.post('/tournaments', tournamentData);
+    const response = await axios.post('/tournaments', tournamentData);
     return response.data;
   } catch (error) {
     handleError(error);
   }
 };
 
-// 更新赛事
+// 更新賽事
 export const updateTournament = async (id, tournamentData) => {
   try {
-    const response = await api.put(`/tournaments/${id}`, tournamentData);
+    const response = await axios.put(`/tournaments/${id}`, tournamentData);
     return response.data;
   } catch (error) {
     handleError(error);
   }
 };
 
-// 删除赛事
+// 刪除賽事
 export const deleteTournament = async (id) => {
   try {
-    await api.delete(`/tournaments/${id}`);
+    await axios.delete(`/tournaments/${id}`);
   } catch (error) {
     handleError(error);
   }
