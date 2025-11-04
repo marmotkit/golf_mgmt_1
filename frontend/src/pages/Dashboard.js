@@ -368,7 +368,7 @@ const Dashboard = () => {
               <IconWrapper>
                 <EmojiEventsIcon color="primary" />
                 <Typography variant="h6" component="div">
-                  年度總桿冠軍榜
+                  {selectedYear}年度總桿冠軍榜
                 </Typography>
               </IconWrapper>
               <Button
