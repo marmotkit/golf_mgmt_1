@@ -27,9 +27,10 @@ const handleError = (error) => {
 };
 
 // 獲取儀表板統計數據
-export const getStats = async () => {
+export const getStats = async (year = null) => {
   try {
-    const response = await axios.get('/dashboard/stats');
+    const url = year ? `/dashboard/stats?year=${year}` : '/dashboard/stats';
+    const response = await axios.get(url);
     return response.data;
   } catch (error) {
     handleError(error);

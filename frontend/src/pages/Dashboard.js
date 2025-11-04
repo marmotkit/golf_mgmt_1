@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Grid, Paper, Typography, Box, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from '@mui/material';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Container, Grid, Paper, Typography, Box, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '@mui/material/styles';
 import {
@@ -78,6 +78,43 @@ const Dashboard = () => {
   const [announcementForm, setAnnouncementForm] = useState({
     content: '',
   });
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [tournaments, setTournaments] = useState([]);
+
+  // 獲取所有賽事列表以提取可用年度
+  useEffect(() => {
+    const fetchTournaments = async () => {
+      try {
+        const tournamentService = await import('../services/tournamentService');
+        const data = await tournamentService.getAllTournaments();
+        setTournaments(data);
+      } catch (error) {
+        console.error('Error fetching tournaments:', error);
+      }
+    };
+    fetchTournaments();
+  }, []);
+
+  // 獲取所有可用的年度列表
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    const currentYear = new Date().getFullYear();
+    years.add(currentYear); // 確保包含當前年度
+    
+    tournaments.forEach(tournament => {
+      if (tournament.date) {
+        const year = new Date(tournament.date).getFullYear();
+        years.add(year);
+      }
+    });
+    // 也從冠軍榜中提取年度
+    stats.champions.forEach(champion => {
+      if (champion.year) {
+        years.add(champion.year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // 降序排列（最新的在前）
+  }, [tournaments, stats.champions]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -88,7 +125,7 @@ const Dashboard = () => {
           versionResponse,
           versionDescResponse
         ] = await Promise.all([
-          dashboardService.getStats(),
+          dashboardService.getStats(selectedYear),
           dashboardService.getAnnouncements(),
           dashboardService.getVersion(),
           dashboardService.getVersionDescription(),
@@ -105,7 +142,12 @@ const Dashboard = () => {
     };
 
     fetchData();
-  }, []);
+  }, [selectedYear]);
+
+  // 處理年度篩選變更
+  const handleYearChange = (event) => {
+    setSelectedYear(event.target.value);
+  };
 
   const handleVersionClick = async (event) => {
     event.preventDefault();
@@ -155,7 +197,7 @@ const Dashboard = () => {
     } else {
       setEditingChampion(null);
       setChampionForm({
-        year: new Date().getFullYear(),
+        year: selectedYear,
         tournament_name: '',
         member_name: '',
         total_strokes: '',
@@ -176,7 +218,7 @@ const Dashboard = () => {
       } else {
         await dashboardService.createChampion(championForm);
       }
-      const statsResponse = await dashboardService.getStats();
+      const statsResponse = await dashboardService.getStats(selectedYear);
       setStats(statsResponse);
       handleChampionDialogClose();
     } catch (error) {
@@ -188,7 +230,7 @@ const Dashboard = () => {
     if (window.confirm('確定要刪除這筆記錄嗎？')) {
       try {
         await dashboardService.deleteChampion(id);
-        const statsResponse = await dashboardService.getStats();
+        const statsResponse = await dashboardService.getStats(selectedYear);
         setStats(statsResponse);
       } catch (error) {
         console.error('Error deleting champion:', error);
@@ -257,6 +299,24 @@ const Dashboard = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      {/* 年度篩選 */}
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>年度篩選</InputLabel>
+          <Select
+            value={selectedYear}
+            label="年度篩選"
+            onChange={handleYearChange}
+          >
+            {availableYears.map(year => (
+              <MenuItem key={year} value={year}>
+                {year} 年
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
+
       <Grid container spacing={3}>
         {/* 會員統計卡片 */}
         <Grid item xs={12} md={6} lg={3}>
@@ -289,7 +349,7 @@ const Dashboard = () => {
             <IconWrapper>
               <GolfCourseIcon color="primary" />
               <Typography variant="h6" component="div">
-                本年度賽事
+                {selectedYear}年度賽事
               </Typography>
             </IconWrapper>
             <Box display="flex" alignItems="center">

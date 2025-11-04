@@ -11,6 +11,15 @@ def get_dashboard_stats():
     try:
         current_app.logger.info("開始獲取儀表板統計數據")
         
+        # 獲取年度參數，預設為當前年度
+        year_param = request.args.get('year', type=int)
+        if year_param:
+            selected_year = year_param
+        else:
+            selected_year = datetime.now().year
+        
+        current_app.logger.info(f"選擇的年度: {selected_year}")
+        
         # 獲取所有非來賓會員
         members = Member.query.filter_by(is_guest=False).all()
         member_count = len(members)
@@ -21,22 +30,23 @@ def get_dashboard_stats():
         female_count = sum(1 for m in members if m.member_number and m.member_number.startswith('F'))
         current_app.logger.info(f"男性會員: {male_count}, 女性會員: {female_count}")
 
-        # 獲取本年度的賽事
-        current_year = datetime.now().year
+        # 獲取指定年度的賽事
         tournaments = Tournament.query.filter(
-            func.extract('year', Tournament.date) == current_year
+            func.extract('year', Tournament.date) == selected_year
         ).order_by(Tournament.date.desc()).all()
 
-        # 計算本年度賽事總數
+        # 計算指定年度賽事總數
         tournament_count = len(tournaments)
-        current_app.logger.info(f"本年度賽事數量: {tournament_count}")
+        current_app.logger.info(f"{selected_year}年度賽事數量: {tournament_count}")
         
         # 獲取最新賽事名稱
         latest_tournament_name = tournaments[0].name if tournaments else ""
         current_app.logger.info(f"最新賽事名稱: {latest_tournament_name}")
 
-        # 獲取最新的年度總桿冠軍榜數據
-        champions = YearlyChampion.query.order_by(YearlyChampion.date.desc()).limit(5).all()
+        # 獲取指定年度的年度總桿冠軍榜數據
+        champions = YearlyChampion.query.filter(
+            YearlyChampion.year == selected_year
+        ).order_by(YearlyChampion.date.desc()).limit(5).all()
         champions_data = [c.to_dict() for c in champions]
         current_app.logger.info(f"年度總桿冠軍榜數據: {champions_data}")
 
