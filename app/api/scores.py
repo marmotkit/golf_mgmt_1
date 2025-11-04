@@ -426,12 +426,14 @@ def get_annual_stats():
         tournament_names = {t.id: t.name for t in tournaments}
         
         # 按會員分組統計數據
-        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
-        # 為了與賽事成績頁面保持一致，我們使用ID最大的記錄（通常是最後插入的，最可能是正確的）
-        # 如果同一會員同一賽事有多筆記錄，優先使用ID最大的
+        # 先按姓名+賽事去重，每個會員每個賽事只保留一筆記錄
+        # 使用姓名而不是會員編號，避免會員編號變更或重複的問題
+        # 如果同一姓名同一賽事有多筆記錄，優先使用ID最大的記錄（通常是最後插入的）
         unique_scores = {}
         for score in scores:
-            key = (score.member_number, score.tournament_id)
+            # 使用姓名作為key，如果姓名為空則使用會員編號作為備用
+            name_key = score.chinese_name if score.chinese_name else score.member_number
+            key = (name_key, score.tournament_id)
             if key not in unique_scores:
                 unique_scores[key] = score
             else:
@@ -444,17 +446,24 @@ def get_annual_stats():
         current_app.logger.info(f"去重後保留 {len(unique_scores)} 筆唯一記錄")
         
         # 記錄每個會員每個賽事使用的記錄，用於調試
-        for (member_number, tournament_id), score in unique_scores.items():
-            current_app.logger.info(f"會員 {member_number} 賽事 {tournament_id} 使用記錄 ID {score.id}, 總桿 {score.gross_score}, 積分 {score.points}")
+        for (name_key, tournament_id), score in unique_scores.items():
+            current_app.logger.info(f"會員 {name_key} 賽事 {tournament_id} 使用記錄 ID {score.id}, 總桿 {score.gross_score}, 積分 {score.points}")
         
         stats = {}
-        for (member_number, tournament_id), score in unique_scores.items():
-            if member_number not in stats:
-                stats[member_number] = {
+        for (name_key, tournament_id), score in unique_scores.items():
+            if name_key not in stats:
+                # 從記錄中獲取會員編號和性別資訊
+                member_number = score.member_number if score.member_number else ''
+                gender = 'F' if member_number and member_number.startswith('F') else 'M'
+                if not member_number and score.chinese_name:
+                    # 如果沒有會員編號，嘗試從姓名判斷性別（這可能不準確，但作為備用）
+                    gender = 'M'  # 預設為男性
+                
+                stats[name_key] = {
                     'member_number': member_number,
-                    'name': score.chinese_name,
-                    'gender': 'F' if member_number.startswith('F') else 'M',
-                    'full_name': score.full_name,
+                    'name': score.chinese_name if score.chinese_name else name_key,
+                    'gender': gender,
+                    'full_name': score.full_name if score.full_name else '',
                     'total_gross_scores': [],
                     'participation_count': 0,
                     'handicaps': [],
@@ -462,7 +471,7 @@ def get_annual_stats():
                     'tournaments': []
                 }
             
-            member_stats = stats[member_number]
+            member_stats = stats[name_key]
             member_stats['participation_count'] += 1
             
             # 使用相同的記錄來計算統計資料和賽事詳情，確保一致性
@@ -485,12 +494,12 @@ def get_annual_stats():
         
         # 計算平均值並格式化數據
         result = []
-        for member_number, member_stats in stats.items():
+        for name_key, member_stats in stats.items():
             avg_gross = sum(member_stats['total_gross_scores']) / len(member_stats['total_gross_scores']) if member_stats['total_gross_scores'] else 0
             avg_handicap = sum(member_stats['handicaps']) / len(member_stats['handicaps']) if member_stats['handicaps'] else 0
             
             result.append({
-                'member_number': member_number,
+                'member_number': member_stats['member_number'],
                 'name': member_stats['name'],
                 'gender': member_stats['gender'],
                 'full_name': member_stats['full_name'],
@@ -623,11 +632,13 @@ def export_annual_stats():
         tournament_names = {t.id: t.name for t in tournaments}
         
         # 按會員分組統計數據（與 annual-stats 相同的邏輯）
-        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
-        # 為了與賽事成績頁面保持一致，使用ID最大的記錄（通常是最後插入的）
+        # 先按姓名+賽事去重，每個會員每個賽事只保留一筆記錄
+        # 使用姓名而不是會員編號，避免會員編號變更或重複的問題
         unique_scores = {}
         for score in scores:
-            key = (score.member_number, score.tournament_id)
+            # 使用姓名作為key，如果姓名為空則使用會員編號作為備用
+            name_key = score.chinese_name if score.chinese_name else score.member_number
+            key = (name_key, score.tournament_id)
             if key not in unique_scores:
                 unique_scores[key] = score
             else:
@@ -640,13 +651,20 @@ def export_annual_stats():
         current_app.logger.info(f"去重後保留 {len(unique_scores)} 筆唯一記錄")
         
         stats = {}
-        for (member_number, tournament_id), score in unique_scores.items():
-            if member_number not in stats:
-                stats[member_number] = {
+        for (name_key, tournament_id), score in unique_scores.items():
+            if name_key not in stats:
+                # 從記錄中獲取會員編號和性別資訊
+                member_number = score.member_number if score.member_number else ''
+                gender = 'F' if member_number and member_number.startswith('F') else 'M'
+                if not member_number and score.chinese_name:
+                    # 如果沒有會員編號，嘗試從姓名判斷性別（這可能不準確，但作為備用）
+                    gender = 'M'  # 預設為男性
+                
+                stats[name_key] = {
                     'member_number': member_number,
-                    'name': score.chinese_name,
-                    'gender': 'F' if member_number and member_number.startswith('F') else 'M',
-                    'full_name': score.full_name,
+                    'name': score.chinese_name if score.chinese_name else name_key,
+                    'gender': gender,
+                    'full_name': score.full_name if score.full_name else '',
                     'total_gross_scores': [],
                     'participation_count': 0,
                     'handicaps': [],
@@ -654,7 +672,7 @@ def export_annual_stats():
                     'tournaments': []
                 }
             
-            member_stats = stats[member_number]
+            member_stats = stats[name_key]
             member_stats['participation_count'] += 1
             
             if score.gross_score is not None:
@@ -676,12 +694,12 @@ def export_annual_stats():
         
         # 計算平均值並格式化數據
         result = []
-        for member_number, member_stats in stats.items():
+        for name_key, member_stats in stats.items():
             avg_gross = sum(member_stats['total_gross_scores']) / len(member_stats['total_gross_scores']) if member_stats['total_gross_scores'] else 0
             avg_handicap = sum(member_stats['handicaps']) / len(member_stats['handicaps']) if member_stats['handicaps'] else 0
             
             result.append({
-                'member_number': member_number,
+                'member_number': member_stats['member_number'],
                 'name': member_stats['name'],
                 'gender': member_stats['gender'],
                 'full_name': member_stats['full_name'],
