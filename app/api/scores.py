@@ -427,9 +427,8 @@ def get_annual_stats():
         
         # 按會員分組統計數據
         # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
-        # 使用與賽事成績頁面相同的邏輯：按更新時間和ID排序，保留最新的記錄
-        # 為了與賽事成績頁面保持一致，我們按(會員編號+賽事ID)去重，保留ID最大的記錄
-        # 但更準確的方式是：按更新時間最新的，如果更新時間相同則按ID最大的
+        # 為了與賽事成績頁面保持一致，我們使用ID最大的記錄（通常是最後插入的，最可能是正確的）
+        # 如果同一會員同一賽事有多筆記錄，優先使用ID最大的
         unique_scores = {}
         for score in scores:
             key = (score.member_number, score.tournament_id)
@@ -437,19 +436,16 @@ def get_annual_stats():
                 unique_scores[key] = score
             else:
                 existing = unique_scores[key]
-                # 比較更新時間，保留最新的
-                if score.updated_at and existing.updated_at:
-                    if score.updated_at > existing.updated_at:
-                        unique_scores[key] = score
-                    elif score.updated_at == existing.updated_at and score.id > existing.id:
-                        unique_scores[key] = score
-                elif score.updated_at and not existing.updated_at:
-                    unique_scores[key] = score
-                elif not score.updated_at and not existing.updated_at and score.id > existing.id:
+                # 保留ID最大的記錄（通常是最後插入的）
+                if score.id > existing.id:
                     unique_scores[key] = score
         
         # 記錄去重後的記錄數
         current_app.logger.info(f"去重後保留 {len(unique_scores)} 筆唯一記錄")
+        
+        # 記錄每個會員每個賽事使用的記錄，用於調試
+        for (member_number, tournament_id), score in unique_scores.items():
+            current_app.logger.info(f"會員 {member_number} 賽事 {tournament_id} 使用記錄 ID {score.id}, 總桿 {score.gross_score}, 積分 {score.points}")
         
         stats = {}
         for (member_number, tournament_id), score in unique_scores.items():
@@ -469,6 +465,7 @@ def get_annual_stats():
             member_stats = stats[member_number]
             member_stats['participation_count'] += 1
             
+            # 使用相同的記錄來計算統計資料和賽事詳情，確保一致性
             if score.gross_score is not None:
                 member_stats['total_gross_scores'].append(score.gross_score)
             if score.new_handicap is not None:
@@ -476,14 +473,14 @@ def get_annual_stats():
             if score.points is not None:
                 member_stats['total_points'] += score.points
                 
-            # 添加個別賽事資料
+            # 添加個別賽事資料（使用與統計計算相同的記錄，確保一致性）
             member_stats['tournaments'].append({
                 'tournament_name': tournament_names[tournament_id],
                 'new_handicap': score.new_handicap,
-                'gross_score': score.gross_score,
+                'gross_score': score.gross_score,  # 這應該與total_gross_scores中的值一致（當只有一個賽事時）
                 'net_score': score.net_score,
                 'rank': score.rank,
-                'points': score.points
+                'points': score.points  # 這應該與total_points一致（當只有一個賽事時）
             })
         
         # 計算平均值並格式化數據
@@ -627,7 +624,7 @@ def export_annual_stats():
         
         # 按會員分組統計數據（與 annual-stats 相同的邏輯）
         # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄
-        # 使用與賽事成績頁面相同的邏輯：按更新時間和ID排序，保留最新的記錄
+        # 為了與賽事成績頁面保持一致，使用ID最大的記錄（通常是最後插入的）
         unique_scores = {}
         for score in scores:
             key = (score.member_number, score.tournament_id)
@@ -635,15 +632,8 @@ def export_annual_stats():
                 unique_scores[key] = score
             else:
                 existing = unique_scores[key]
-                # 比較更新時間，保留最新的
-                if score.updated_at and existing.updated_at:
-                    if score.updated_at > existing.updated_at:
-                        unique_scores[key] = score
-                    elif score.updated_at == existing.updated_at and score.id > existing.id:
-                        unique_scores[key] = score
-                elif score.updated_at and not existing.updated_at:
-                    unique_scores[key] = score
-                elif not score.updated_at and not existing.updated_at and score.id > existing.id:
+                # 保留ID最大的記錄（通常是最後插入的）
+                if score.id > existing.id:
                     unique_scores[key] = score
         
         # 記錄去重後的記錄數
