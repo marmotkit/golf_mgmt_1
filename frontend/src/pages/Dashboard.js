@@ -65,16 +65,8 @@ const Dashboard = () => {
   const [versionDescription, setVersionDescription] = useState('');
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState('');
-  const [championDialogOpen, setChampionDialogOpen] = useState(false);
   const [announcementDialogOpen, setAnnouncementDialogOpen] = useState(false);
-  const [editingChampion, setEditingChampion] = useState(null);
   const [editingAnnouncement, setEditingAnnouncement] = useState(null);
-  const [championForm, setChampionForm] = useState({
-    year: new Date().getFullYear(),
-    tournament_name: '',
-    member_name: '',
-    total_strokes: '',
-  });
   const [announcementForm, setAnnouncementForm] = useState({
     content: '',
   });
@@ -185,58 +177,6 @@ const Dashboard = () => {
     }
   };
 
-  const handleChampionDialogOpen = (champion = null) => {
-    if (champion) {
-      setEditingChampion(champion);
-      setChampionForm({
-        year: champion.year,
-        tournament_name: champion.tournament_name,
-        member_name: champion.member_name,
-        total_strokes: champion.total_strokes,
-      });
-    } else {
-      setEditingChampion(null);
-      setChampionForm({
-        year: selectedYear,
-        tournament_name: '',
-        member_name: '',
-        total_strokes: '',
-      });
-    }
-    setChampionDialogOpen(true);
-  };
-
-  const handleChampionDialogClose = () => {
-    setChampionDialogOpen(false);
-    setEditingChampion(null);
-  };
-
-  const handleChampionSubmit = async () => {
-    try {
-      if (editingChampion) {
-        await dashboardService.updateChampion(editingChampion.id, championForm);
-      } else {
-        await dashboardService.createChampion(championForm);
-      }
-      const statsResponse = await dashboardService.getStats(selectedYear);
-      setStats(statsResponse);
-      handleChampionDialogClose();
-    } catch (error) {
-      console.error('Error saving champion:', error);
-    }
-  };
-
-  const handleChampionDelete = async (id) => {
-    if (window.confirm('確定要刪除這筆記錄嗎？')) {
-      try {
-        await dashboardService.deleteChampion(id);
-        const statsResponse = await dashboardService.getStats(selectedYear);
-        setStats(statsResponse);
-      } catch (error) {
-        console.error('Error deleting champion:', error);
-      }
-    }
-  };
 
   const handleAnnouncementDialogOpen = (announcement = null) => {
     if (announcement) {
@@ -371,37 +311,28 @@ const Dashboard = () => {
                   {selectedYear}年度總桿冠軍榜
                 </Typography>
               </IconWrapper>
-              <Button
-                variant="contained"
-                startIcon={<AddIcon />}
-                onClick={() => handleChampionDialogOpen()}
-              >
-                新增記錄
-              </Button>
             </Box>
-            {stats.champions.map((champion) => (
-              <Box key={champion.id} sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 1,
-                p: 1,
-                borderRadius: 1,
-                '&:hover': { bgcolor: 'action.hover' }
-              }}>
-                <Typography variant="body1">
-                  {champion.year}年度: {champion.tournament_name} - {champion.member_name} {champion.total_strokes}桿
-                </Typography>
-                <Box>
-                  <IconButton size="small" onClick={() => handleChampionDialogOpen(champion)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleChampionDelete(champion.id)}>
-                    <DeleteIcon />
-                  </IconButton>
+            {stats.champions && stats.champions.length > 0 ? (
+              stats.champions.map((champion) => (
+                <Box key={champion.id} sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 1,
+                  p: 1,
+                  borderRadius: 1,
+                  '&:hover': { bgcolor: 'action.hover' }
+                }}>
+                  <Typography variant="body1">
+                    {champion.year}年度: {champion.tournament_name} - {champion.member_name} {champion.total_strokes}桿
+                  </Typography>
                 </Box>
-              </Box>
-            ))}
+              ))
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ p: 2 }}>
+                目前沒有總桿冠軍記錄
+              </Typography>
+            )}
           </StatsCard>
         </Grid>
 
@@ -519,47 +450,6 @@ const Dashboard = () => {
           Copy Right : Designed by KT. Liang
         </Typography>
       </Box>
-
-      {/* 總桿冠軍編輯對話框 */}
-      <Dialog open={championDialogOpen} onClose={handleChampionDialogClose}>
-        <DialogTitle>{editingChampion ? '編輯記錄' : '新增記錄'}</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <TextField
-              label="年度"
-              type="number"
-              value={championForm.year}
-              onChange={(e) => setChampionForm({ ...championForm, year: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="賽事名稱"
-              value={championForm.tournament_name}
-              onChange={(e) => setChampionForm({ ...championForm, tournament_name: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="會員姓名"
-              value={championForm.member_name}
-              onChange={(e) => setChampionForm({ ...championForm, member_name: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="總桿數"
-              type="number"
-              value={championForm.total_strokes}
-              onChange={(e) => setChampionForm({ ...championForm, total_strokes: e.target.value })}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleChampionDialogClose}>取消</Button>
-          <Button onClick={handleChampionSubmit} variant="contained">
-            確定
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* 公告編輯對話框 */}
       <Dialog open={announcementDialogOpen} onClose={handleAnnouncementDialogClose}>

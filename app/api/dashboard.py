@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, current_app, request
-from app.models import Member, Tournament, YearlyChampion, db, Announcement, SystemConfig
+from app.models import Member, Tournament, YearlyChampion, db, Announcement, SystemConfig, TournamentAward, AwardType
 from datetime import datetime
 from sqlalchemy import func
 import traceback
@@ -43,11 +43,39 @@ def get_dashboard_stats():
         latest_tournament_name = tournaments[0].name if tournaments else ""
         current_app.logger.info(f"最新賽事名稱: {latest_tournament_name}")
 
-        # 獲取指定年度的年度總桿冠軍榜數據
-        champions = YearlyChampion.query.filter(
-            YearlyChampion.year == selected_year
-        ).order_by(YearlyChampion.date.desc()).limit(5).all()
-        champions_data = [c.to_dict() for c in champions]
+        # 從獎項管理中獲取指定年度的總桿冠軍榜數據
+        # 先找到「總桿冠軍」獎項類型
+        gross_champion_type = AwardType.query.filter_by(name='總桿冠軍', is_active=True).first()
+        
+        champions_data = []
+        if gross_champion_type:
+            # 獲取指定年度的賽事
+            year_tournaments = Tournament.query.filter(
+                func.extract('year', Tournament.date) == selected_year
+            ).all()
+            
+            tournament_ids = [t.id for t in year_tournaments]
+            
+            if tournament_ids:
+                # 獲取這些賽事中「總桿冠軍」類型的獎項
+                awards = TournamentAward.query.filter(
+                    TournamentAward.award_type_id == gross_champion_type.id,
+                    TournamentAward.tournament_id.in_(tournament_ids)
+                ).order_by(TournamentAward.created_at.desc()).limit(5).all()
+                
+                # 格式化為冠軍榜格式
+                for award in awards:
+                    tournament = award.tournament
+                    year = tournament.date.year if tournament.date else selected_year
+                    champions_data.append({
+                        'id': award.id,
+                        'year': year,
+                        'tournament_name': tournament.name if tournament else '',
+                        'member_name': award.chinese_name if award.chinese_name else '',
+                        'total_strokes': int(award.score) if award.score else 0,
+                        'date': award.created_at.isoformat() if award.created_at else None
+                    })
+        
         current_app.logger.info(f"年度總桿冠軍榜數據: {champions_data}")
 
         response_data = {
