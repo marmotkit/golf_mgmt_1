@@ -578,3 +578,180 @@ def export_scores(tournament_id):
             'error': '匯出成績失敗',
             'details': str(e)
         }), 500
+
+@bp.route('/annual-stats/export', methods=['POST'])
+def export_annual_stats():
+    """匯出年度總成績為 Excel 檔案"""
+    try:
+        current_app.logger.info("開始匯出年度總成績")
+        data = request.get_json()
+        tournament_ids = data.get('tournament_ids', [])
+        
+        if not tournament_ids:
+            return jsonify({'error': '請選擇至少一個賽事'}), 400
+        
+        # 獲取所選賽事的所有成績
+        scores = Score.query.filter(Score.tournament_id.in_(tournament_ids)).all()
+        tournaments = Tournament.query.filter(Tournament.id.in_(tournament_ids)).all()
+        
+        if not scores:
+            return jsonify({'error': '沒有可匯出的資料'}), 404
+        
+        # 建立賽事 ID 到名稱的映射
+        tournament_names = {t.id: t.name for t in tournaments}
+        
+        # 按會員分組統計數據（與 annual-stats 相同的邏輯）
+        stats = {}
+        for score in scores:
+            if score.member_number not in stats:
+                stats[score.member_number] = {
+                    'member_number': score.member_number,
+                    'name': score.chinese_name,
+                    'gender': 'F' if score.member_number and score.member_number.startswith('F') else 'M',
+                    'full_name': score.full_name,
+                    'total_gross_scores': [],
+                    'participation_count': 0,
+                    'handicaps': [],
+                    'total_points': 0,
+                    'tournaments': []
+                }
+            
+            member_stats = stats[score.member_number]
+            member_stats['participation_count'] += 1
+            
+            if score.gross_score is not None:
+                member_stats['total_gross_scores'].append(score.gross_score)
+            if score.new_handicap is not None:
+                member_stats['handicaps'].append(score.new_handicap)
+            if score.points is not None:
+                member_stats['total_points'] += score.points
+                
+            # 添加個別賽事資料
+            member_stats['tournaments'].append({
+                'tournament_name': tournament_names[score.tournament_id],
+                'new_handicap': score.new_handicap,
+                'gross_score': score.gross_score,
+                'net_score': score.net_score,
+                'rank': score.rank,
+                'points': score.points
+            })
+        
+        # 計算平均值並格式化數據
+        result = []
+        for member_number, member_stats in stats.items():
+            avg_gross = sum(member_stats['total_gross_scores']) / len(member_stats['total_gross_scores']) if member_stats['total_gross_scores'] else 0
+            avg_handicap = sum(member_stats['handicaps']) / len(member_stats['handicaps']) if member_stats['handicaps'] else 0
+            
+            result.append({
+                'member_number': member_number,
+                'name': member_stats['name'],
+                'gender': member_stats['gender'],
+                'full_name': member_stats['full_name'],
+                'avg_gross_score': round(avg_gross, 1),
+                'participation_count': member_stats['participation_count'],
+                'avg_handicap': round(avg_handicap, 1),
+                'total_points': member_stats['total_points'],
+                'tournaments': sorted(member_stats['tournaments'], key=lambda x: x['tournament_name'])
+            })
+        
+        # 按總積分降序排序
+        result.sort(key=lambda x: x['total_points'], reverse=True)
+        
+        # 建立 Excel 工作簿
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "年度總成績"
+        
+        # 設定標題行樣式
+        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        header_font = Font(bold=True, color="FFFFFF", size=12)
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        thin_border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+        
+        # 設定標題
+        headers = ['會員編號', '姓名', '性別', '級別', '總桿平均', '參與次數', '差點平均', '年度積分']
+        ws.append(headers)
+        
+        # 設定標題行樣式
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = header_alignment
+            cell.border = thin_border
+        
+        # 填入資料
+        data_font = Font(size=11)
+        data_alignment = Alignment(horizontal="left", vertical="center")
+        
+        for row_data in result:
+            row = [
+                row_data['member_number'] or '',
+                row_data['name'] or '',
+                '女' if row_data['gender'] == 'F' else '男',
+                row_data['full_name'] or '',
+                row_data['avg_gross_score'],
+                row_data['participation_count'],
+                row_data['avg_handicap'],
+                row_data['total_points']
+            ]
+            ws.append(row)
+            
+            # 設定資料行樣式
+            for col_num in range(1, len(headers) + 1):
+                cell = ws.cell(row=ws.max_row, column=col_num)
+                cell.font = data_font
+                cell.alignment = data_alignment
+                cell.border = thin_border
+        
+        # 自動調整欄寬
+        for col_num, header in enumerate(headers, 1):
+            max_length = len(header)
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=col_num, max_col=col_num):
+                for cell in row:
+                    if cell.value:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[get_column_letter(col_num)].width = adjusted_width
+        
+        # 設定行高
+        ws.row_dimensions[1].height = 25
+        for row_num in range(2, ws.max_row + 1):
+            ws.row_dimensions[row_num].height = 20
+        
+        # 建立檔案緩衝區
+        output = BytesIO()
+        wb.save(output)
+        output.seek(0)
+        
+        # 產生檔案名稱
+        tournament_names_str = '_'.join([t.name for t in sorted(tournaments, key=lambda x: x.date)][:3])
+        if len(tournaments) > 3:
+            tournament_names_str += f'_等{len(tournaments)}場'
+        filename = f'年度總成績_{tournament_names_str}_{datetime.now().strftime("%Y%m%d")}.xlsx'
+        
+        current_app.logger.info(f"匯出成功，檔案名稱: {filename}")
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        current_app.logger.error(f"匯出年度總成績時發生錯誤: {str(e)}")
+        current_app.logger.error(traceback.format_exc())
+        return jsonify({
+            'error': '匯出年度總成績失敗',
+            'details': str(e)
+        }), 500

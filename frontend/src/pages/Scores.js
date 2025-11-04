@@ -412,6 +412,52 @@ function Scores() {
     }
   };
 
+  const handleExportAnnualStats = async () => {
+    if (selectedTournaments.length === 0) {
+      enqueueSnackbar('請先選擇至少一個賽事', { variant: 'warning' });
+      return;
+    }
+
+    if (annualStats.length === 0) {
+      enqueueSnackbar('沒有可匯出的資料', { variant: 'warning' });
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        '/scores/annual-stats/export',
+        { tournament_ids: selectedTournaments },
+        { responseType: 'blob' }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // 從 Content-Disposition header 獲取檔案名稱，或使用預設名稱
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = '年度總成績.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = decodeURIComponent(filenameMatch[1].replace(/['"]/g, ''));
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      enqueueSnackbar('年度總成績匯出成功', { variant: 'success' });
+    } catch (error) {
+      console.error('匯出年度總成績時發生錯誤:', error);
+      const errorMessage = error.response?.data?.error || '匯出年度總成績失敗';
+      enqueueSnackbar(errorMessage, { variant: 'error' });
+    }
+  };
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
@@ -527,9 +573,20 @@ function Scores() {
 
         <TabPanel value={value} index={1}>
           <Box sx={{ mb: 2 }}>
-            <Typography variant="h6" gutterBottom>
-              選擇要統計的賽事
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                選擇要統計的賽事
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<DownloadIcon />}
+                onClick={handleExportAnnualStats}
+                disabled={selectedTournaments.length === 0 || annualStats.length === 0}
+              >
+                匯出年度總成績
+              </Button>
+            </Box>
             <FormGroup row>
               {tournaments.map((tournament) => (
                 <FormControlLabel
