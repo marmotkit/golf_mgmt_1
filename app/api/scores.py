@@ -426,13 +426,20 @@ def get_annual_stats():
         tournament_names = {t.id: t.name for t in tournaments}
         
         # 按會員分組統計數據
-        stats = {}
+        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄（保留ID最大的，通常是最新的）
+        unique_scores = {}
         for score in scores:
-            if score.member_number not in stats:
-                stats[score.member_number] = {
-                    'member_number': score.member_number,
+            key = (score.member_number, score.tournament_id)
+            if key not in unique_scores or score.id > unique_scores[key].id:
+                unique_scores[key] = score
+        
+        stats = {}
+        for (member_number, tournament_id), score in unique_scores.items():
+            if member_number not in stats:
+                stats[member_number] = {
+                    'member_number': member_number,
                     'name': score.chinese_name,
-                    'gender': 'F' if score.member_number.startswith('F') else 'M',
+                    'gender': 'F' if member_number.startswith('F') else 'M',
                     'full_name': score.full_name,
                     'total_gross_scores': [],
                     'participation_count': 0,
@@ -441,7 +448,7 @@ def get_annual_stats():
                     'tournaments': []
                 }
             
-            member_stats = stats[score.member_number]
+            member_stats = stats[member_number]
             member_stats['participation_count'] += 1
             
             if score.gross_score is not None:
@@ -453,7 +460,7 @@ def get_annual_stats():
                 
             # 添加個別賽事資料
             member_stats['tournaments'].append({
-                'tournament_name': tournament_names[score.tournament_id],
+                'tournament_name': tournament_names[tournament_id],
                 'new_handicap': score.new_handicap,
                 'gross_score': score.gross_score,
                 'net_score': score.net_score,
@@ -601,13 +608,20 @@ def export_annual_stats():
         tournament_names = {t.id: t.name for t in tournaments}
         
         # 按會員分組統計數據（與 annual-stats 相同的邏輯）
-        stats = {}
+        # 先按會員+賽事去重，每個會員每個賽事只保留一筆記錄（保留ID最大的，通常是最新的）
+        unique_scores = {}
         for score in scores:
-            if score.member_number not in stats:
-                stats[score.member_number] = {
-                    'member_number': score.member_number,
+            key = (score.member_number, score.tournament_id)
+            if key not in unique_scores or score.id > unique_scores[key].id:
+                unique_scores[key] = score
+        
+        stats = {}
+        for (member_number, tournament_id), score in unique_scores.items():
+            if member_number not in stats:
+                stats[member_number] = {
+                    'member_number': member_number,
                     'name': score.chinese_name,
-                    'gender': 'F' if score.member_number and score.member_number.startswith('F') else 'M',
+                    'gender': 'F' if member_number and member_number.startswith('F') else 'M',
                     'full_name': score.full_name,
                     'total_gross_scores': [],
                     'participation_count': 0,
@@ -616,7 +630,7 @@ def export_annual_stats():
                     'tournaments': []
                 }
             
-            member_stats = stats[score.member_number]
+            member_stats = stats[member_number]
             member_stats['participation_count'] += 1
             
             if score.gross_score is not None:
@@ -628,7 +642,7 @@ def export_annual_stats():
                 
             # 添加個別賽事資料
             member_stats['tournaments'].append({
-                'tournament_name': tournament_names[score.tournament_id],
+                'tournament_name': tournament_names[tournament_id],
                 'new_handicap': score.new_handicap,
                 'gross_score': score.gross_score,
                 'net_score': score.net_score,
