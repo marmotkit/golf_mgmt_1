@@ -21,8 +21,10 @@ import {
   Grid
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import * as awardService from '../services/awardService';
 import * as tournamentService from '../services/tournamentService';
+import axios from '../utils/axios';
 
 const Awards = () => {
   const [tournaments, setTournaments] = useState([]);
@@ -171,6 +173,45 @@ const Awards = () => {
       showMessage('刪除得獎者成功');
     } catch (error) {
       showMessage(error.message, 'error');
+    }
+  };
+
+  // 處理匯出資料
+  const handleExport = async () => {
+    if (!selectedTournament) {
+      showMessage('請先選擇賽事', 'warning');
+      return;
+    }
+
+    try {
+      // 獲取選中的賽事名稱
+      const tournament = tournaments.find(t => t.id === selectedTournament);
+      if (!tournament) {
+        showMessage('找不到賽事資訊', 'error');
+        return;
+      }
+
+      const response = await axios.get(
+        `/awards/export?tournament_name=${encodeURIComponent(tournament.name)}`,
+        { responseType: 'blob' }
+      );
+
+      // 建立下載連結
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // 設定檔案名稱
+      const fileName = `獎項管理_${tournament.name}_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.setAttribute('download', fileName);
+      
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      showMessage('匯出成功');
+    } catch (error) {
+      showMessage('匯出失敗: ' + (error.message || '未知錯誤'), 'error');
     }
   };
 
@@ -413,20 +454,35 @@ const Awards = () => {
         </Grid>
       </Paper>
 
-      <FormControl sx={{ mb: 4, minWidth: 300 }}>
-        <InputLabel>選擇賽事</InputLabel>
-        <Select
-          value={selectedTournament}
-          onChange={handleTournamentChange}
-          label="選擇賽事"
-        >
-          {tournaments.map((tournament) => (
-            <MenuItem key={tournament.id} value={tournament.id}>
-              {tournament.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
+      <Box sx={{ mb: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <FormControl sx={{ minWidth: 300 }}>
+          <InputLabel>選擇賽事</InputLabel>
+          <Select
+            value={selectedTournament}
+            onChange={handleTournamentChange}
+            label="選擇賽事"
+          >
+            {tournaments.map((tournament) => (
+              <MenuItem key={tournament.id} value={tournament.id}>
+                {tournament.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {selectedTournament && (
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<FileDownloadIcon />}
+            onClick={handleExport}
+            disabled={loading}
+            sx={{ minWidth: 120 }}
+          >
+            匯出資料
+          </Button>
+        )}
+      </Box>
 
       {selectedTournament && (
         <Paper sx={{ p: 3 }}>
