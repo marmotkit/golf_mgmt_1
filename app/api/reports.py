@@ -67,21 +67,33 @@ def get_stats():
             if scores  # 確保有數據才計算平均值
         }
         
-        # 獲取前10名總積分（加總）
-        member_points = {}
+        # 獲取總積分（加總）和參與次數
+        member_stats = {}
         for score in scores:
-            if score.chinese_name not in member_points:
-                member_points[score.chinese_name] = 0
-            member_points[score.chinese_name] += score.points
+            if score.chinese_name not in member_stats:
+                member_stats[score.chinese_name] = {
+                    'points': 0,
+                    'participation_count': set()
+                }
+            member_stats[score.chinese_name]['points'] += score.points or 0
+            # 統計參與的賽事（去重）
+            member_stats[score.chinese_name]['participation_count'].add(score.tournament_id)
 
-        top_points = [
-            {'member_name': name, 'points': points}
-            for name, points in sorted(
-                member_points.items(),
-                key=lambda x: x[1],
-                reverse=True
-            )[:10]
-        ]
+        # 轉換為列表並計算參與次數
+        member_points_list = []
+        for name, stats in member_stats.items():
+            member_points_list.append({
+                'member_name': name,
+                'points': stats['points'],
+                'participation_count': len(stats['participation_count'])
+            })
+
+        # 排序：先按積分降序，積分相同時按參與次數降序
+        top_points = sorted(
+            member_points_list,
+            key=lambda x: (x['points'], x['participation_count']),
+            reverse=True
+        )
         
         # 獲取前10名平均總桿數
         member_scores = {}

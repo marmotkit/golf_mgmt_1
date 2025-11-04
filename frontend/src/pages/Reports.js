@@ -15,7 +15,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper
+  Paper,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
 import {
   BarChart,
@@ -36,6 +40,7 @@ const Reports = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stats, setStats] = useState(null);
+  const [topPointsCount, setTopPointsCount] = useState(10);
 
   // 獲取賽事列表
   useEffect(() => {
@@ -191,26 +196,47 @@ const Reports = () => {
             </Card>
           </Grid>
 
-          {/* 前10名總積分表格 */}
+          {/* 前N名總積分表格 */}
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  前10名總積分 (加總)
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">
+                    前{topPointsCount}名總積分 (加總)
+                  </Typography>
+                  <FormControl size="small" sx={{ minWidth: 120 }}>
+                    <InputLabel>顯示前幾名</InputLabel>
+                    <Select
+                      value={topPointsCount}
+                      label="顯示前幾名"
+                      onChange={(e) => setTopPointsCount(e.target.value)}
+                    >
+                      <MenuItem value={5}>前5名</MenuItem>
+                      <MenuItem value={10}>前10名</MenuItem>
+                      <MenuItem value={15}>前15名</MenuItem>
+                      <MenuItem value={20}>前20名</MenuItem>
+                      <MenuItem value={30}>前30名</MenuItem>
+                      <MenuItem value={50}>前50名</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
                 <TableContainer component={Paper}>
                   <Table>
                     <TableHead>
                       <TableRow>
+                        <TableCell>名次</TableCell>
                         <TableCell>會員姓名</TableCell>
                         <TableCell align="right">積分</TableCell>
+                        <TableCell align="right">參與次數</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {stats.top_points.map((score, index) => (
+                      {stats.top_points.slice(0, topPointsCount).map((score, index) => (
                         <TableRow key={index}>
+                          <TableCell>{index + 1}</TableCell>
                           <TableCell>{score.member_name}</TableCell>
                           <TableCell align="right">{score.points}</TableCell>
+                          <TableCell align="right">{score.participation_count || 0}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
