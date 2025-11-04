@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -34,6 +34,7 @@ const Awards = () => {
   const [message, setMessage] = useState({ open: false, text: '', severity: 'success' });
   const [winnerInputs, setWinnerInputs] = useState({});
   const [awardTypes, setAwardTypes] = useState([]);
+  const [selectedYear, setSelectedYear] = useState('all');
 
   // 加載賽事列表
   useEffect(() => {
@@ -51,6 +52,59 @@ const Awards = () => {
     };
     fetchTournaments();
   }, []);
+
+  // 獲取所有可用的年度列表
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    tournaments.forEach(tournament => {
+      if (tournament.date) {
+        const year = new Date(tournament.date).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // 降序排列（最新的在前）
+  }, [tournaments]);
+
+  // 根據選擇的年度篩選賽事
+  const filteredTournaments = useMemo(() => {
+    if (selectedYear === 'all') {
+      return tournaments;
+    }
+    return tournaments.filter(tournament => {
+      if (!tournament.date) return false;
+      const year = new Date(tournament.date).getFullYear();
+      return year === parseInt(selectedYear);
+    });
+  }, [tournaments, selectedYear]);
+
+  // 處理年度篩選變更
+  const handleYearChange = (event) => {
+    setSelectedYear(event.target.value);
+    // 如果當前選擇的賽事不在篩選後的列表中，清除選擇
+    const newYear = event.target.value;
+    if (newYear !== 'all' && selectedTournament) {
+      const currentTournament = tournaments.find(t => t.id === parseInt(selectedTournament));
+      if (currentTournament) {
+        const year = new Date(currentTournament.date).getFullYear();
+        if (year !== parseInt(newYear)) {
+          setSelectedTournament('');
+        }
+      }
+    }
+  };
+
+  // 初始化時設置為當前年度（如果有的話）
+  useEffect(() => {
+    if (availableYears.length > 0 && selectedYear === 'all' && tournaments.length > 0) {
+      const currentYear = new Date().getFullYear();
+      if (availableYears.includes(currentYear)) {
+        setSelectedYear(currentYear.toString());
+      } else {
+        // 如果沒有當前年度，使用最新的年度
+        setSelectedYear(availableYears[0].toString());
+      }
+    }
+  }, [availableYears, tournaments.length]);
 
   // 當選擇賽事時加載獎項
   useEffect(() => {
@@ -399,9 +453,26 @@ const Awards = () => {
 
       {/* 總桿冠軍歷月表列 - 直接顯示在最上面 */}
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>總桿冠軍歷月表列</Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6">總桿冠軍歷月表列</Typography>
+          <FormControl size="small" sx={{ minWidth: 150 }}>
+            <InputLabel>年度篩選</InputLabel>
+            <Select
+              value={selectedYear}
+              label="年度篩選"
+              onChange={handleYearChange}
+            >
+              <MenuItem value="all">全部年度</MenuItem>
+              {availableYears.map(year => (
+                <MenuItem key={year} value={year.toString()}>
+                  {year} 年
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
         <Grid container spacing={2}>
-          {tournaments.map((tournament) => {
+          {filteredTournaments.map((tournament) => {
             const tournamentAwards = awards.filter(a => {
               // 找到總桿冠軍獎項類型
               const grossChampionType = awardTypes.find(type => type.name === '總桿冠軍');
@@ -454,7 +525,22 @@ const Awards = () => {
         </Grid>
       </Paper>
 
-      <Box sx={{ mb: 4, display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Box sx={{ mb: 4, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+        <FormControl size="small" sx={{ minWidth: 150 }}>
+          <InputLabel>年度篩選</InputLabel>
+          <Select
+            value={selectedYear}
+            label="年度篩選"
+            onChange={handleYearChange}
+          >
+            <MenuItem value="all">全部年度</MenuItem>
+            {availableYears.map(year => (
+              <MenuItem key={year} value={year.toString()}>
+                {year} 年
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <FormControl sx={{ minWidth: 300 }}>
           <InputLabel>選擇賽事</InputLabel>
           <Select
@@ -462,7 +548,7 @@ const Awards = () => {
             onChange={handleTournamentChange}
             label="選擇賽事"
           >
-            {tournaments.map((tournament) => (
+            {filteredTournaments.map((tournament) => (
               <MenuItem key={tournament.id} value={tournament.id}>
                 {tournament.name}
               </MenuItem>

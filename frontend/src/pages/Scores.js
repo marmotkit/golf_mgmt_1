@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Tab,
@@ -25,6 +25,10 @@ import {
   TableSortLabel,
   TextField,
   InputAdornment,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
@@ -136,6 +140,7 @@ function Scores() {
   const [selectedTournaments, setSelectedTournaments] = useState([]);
   const [order, setOrder] = useState('desc');
   const [orderBy, setOrderBy] = useState('total_points');
+  const [selectedYear, setSelectedYear] = useState('all');
   const { enqueueSnackbar } = useSnackbar();
 
   const columns = [
@@ -209,6 +214,67 @@ function Scores() {
       console.error('Error fetching tournaments:', error);
     }
   };
+
+  // 獲取所有可用的年度列表
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    tournaments.forEach(tournament => {
+      if (tournament.date) {
+        const year = new Date(tournament.date).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // 降序排列（最新的在前）
+  }, [tournaments]);
+
+  // 根據選擇的年度篩選賽事
+  const filteredTournaments = useMemo(() => {
+    if (selectedYear === 'all') {
+      return tournaments;
+    }
+    return tournaments.filter(tournament => {
+      if (!tournament.date) return false;
+      const year = new Date(tournament.date).getFullYear();
+      return year === parseInt(selectedYear);
+    });
+  }, [tournaments, selectedYear]);
+
+  // 處理年度篩選變更
+  const handleYearChange = (event) => {
+    setSelectedYear(event.target.value);
+    // 如果當前選擇的賽事不在篩選後的列表中，清除選擇
+    const newYear = event.target.value;
+    if (newYear !== 'all' && selectedTournament) {
+      const year = new Date(selectedTournament.date).getFullYear();
+      if (year !== parseInt(newYear)) {
+        setSelectedTournament(null);
+      }
+    }
+    // 清除年度總成績的選擇
+    if (newYear !== 'all') {
+      setSelectedTournaments(prev => {
+        return prev.filter(id => {
+          const tournament = tournaments.find(t => t.id === id);
+          if (!tournament) return false;
+          const year = new Date(tournament.date).getFullYear();
+          return year === parseInt(newYear);
+        });
+      });
+    }
+  };
+
+  // 初始化時設置為當前年度（如果有的話）
+  useEffect(() => {
+    if (availableYears.length > 0 && selectedYear === 'all' && tournaments.length > 0) {
+      const currentYear = new Date().getFullYear();
+      if (availableYears.includes(currentYear)) {
+        setSelectedYear(currentYear.toString());
+      } else {
+        // 如果沒有當前年度，使用最新的年度
+        setSelectedYear(availableYears[0].toString());
+      }
+    }
+  }, [availableYears, tournaments.length]);
 
   const fetchScores = async (tournamentId) => {
     try {
@@ -497,12 +563,29 @@ function Scores() {
               </Button>
             </Box>
 
-            <Typography variant="h6" gutterBottom>
-              選擇賽事
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                選擇賽事
+              </Typography>
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <InputLabel>年度篩選</InputLabel>
+                <Select
+                  value={selectedYear}
+                  label="年度篩選"
+                  onChange={handleYearChange}
+                >
+                  <MenuItem value="all">全部年度</MenuItem>
+                  {availableYears.map(year => (
+                    <MenuItem key={year} value={year.toString()}>
+                      {year} 年
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                {tournaments.map((tournament) => (
+                {filteredTournaments.map((tournament) => (
                   <Button
                     key={tournament.id}
                     variant={selectedTournament?.id === tournament.id ? 'contained' : 'outlined'}
@@ -574,9 +657,26 @@ function Scores() {
         <TabPanel value={value} index={1}>
           <Box sx={{ mb: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h6">
-                選擇要統計的賽事
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h6">
+                  選擇要統計的賽事
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>年度篩選</InputLabel>
+                  <Select
+                    value={selectedYear}
+                    label="年度篩選"
+                    onChange={handleYearChange}
+                  >
+                    <MenuItem value="all">全部年度</MenuItem>
+                    {availableYears.map(year => (
+                      <MenuItem key={year} value={year.toString()}>
+                        {year} 年
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Box>
               <Button
                 variant="contained"
                 color="primary"
@@ -588,7 +688,7 @@ function Scores() {
               </Button>
             </Box>
             <FormGroup row>
-              {tournaments.map((tournament) => (
+              {filteredTournaments.map((tournament) => (
                 <FormControlLabel
                   key={tournament.id}
                   control={

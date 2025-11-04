@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box,
   Card,
@@ -43,6 +43,7 @@ const Reports = () => {
   const [topPointsCount, setTopPointsCount] = useState(10);
   const [topScoresCount, setTopScoresCount] = useState(10);
   const [topImprovementsCount, setTopImprovementsCount] = useState(5);
+  const [selectedYear, setSelectedYear] = useState('all');
 
   // 獲取賽事列表
   useEffect(() => {
@@ -87,6 +88,60 @@ const Reports = () => {
     setSelectedTournaments(newTournaments);
   };
 
+  // 獲取所有可用的年度列表
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    tournaments.forEach(tournament => {
+      if (tournament.date) {
+        const year = new Date(tournament.date).getFullYear();
+        years.add(year);
+      }
+    });
+    return Array.from(years).sort((a, b) => b - a); // 降序排列（最新的在前）
+  }, [tournaments]);
+
+  // 根據選擇的年度篩選賽事
+  const filteredTournaments = useMemo(() => {
+    if (selectedYear === 'all') {
+      return tournaments;
+    }
+    return tournaments.filter(tournament => {
+      if (!tournament.date) return false;
+      const year = new Date(tournament.date).getFullYear();
+      return year === parseInt(selectedYear);
+    });
+  }, [tournaments, selectedYear]);
+
+  // 處理年度篩選變更
+  const handleYearChange = (event) => {
+    const newYear = event.target.value;
+    setSelectedYear(newYear);
+    // 如果選擇特定年度，清除不屬於該年度的賽事選擇
+    if (newYear !== 'all') {
+      setSelectedTournaments(prev => {
+        return prev.filter(id => {
+          const tournament = tournaments.find(t => t.id === id);
+          if (!tournament || !tournament.date) return false;
+          const year = new Date(tournament.date).getFullYear();
+          return year === parseInt(newYear);
+        });
+      });
+    }
+  };
+
+  // 初始化時設置為當前年度（如果有的話）
+  useEffect(() => {
+    if (availableYears.length > 0 && selectedYear === 'all' && tournaments.length > 0) {
+      const currentYear = new Date().getFullYear();
+      if (availableYears.includes(currentYear)) {
+        setSelectedYear(currentYear.toString());
+      } else {
+        // 如果沒有當前年度，使用最新的年度
+        setSelectedYear(availableYears[0].toString());
+      }
+    }
+  }, [availableYears, tournaments.length]);
+
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
@@ -96,15 +151,32 @@ const Reports = () => {
       {/* 賽事選擇區域 */}
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            選擇賽事
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              選擇賽事
+            </Typography>
+            <FormControl size="small" sx={{ minWidth: 150 }}>
+              <InputLabel>年度篩選</InputLabel>
+              <Select
+                value={selectedYear}
+                label="年度篩選"
+                onChange={handleYearChange}
+              >
+                <MenuItem value="all">全部年度</MenuItem>
+                {availableYears.map(year => (
+                  <MenuItem key={year} value={year.toString()}>
+                    {year} 年
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
           <ToggleButtonGroup
             value={selectedTournaments}
             onChange={handleTournamentChange}
             multiple
           >
-            {tournaments.map((tournament) => (
+            {filteredTournaments.map((tournament) => (
               <ToggleButton
                 key={tournament.id}
                 value={tournament.id}
