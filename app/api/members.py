@@ -1257,9 +1257,9 @@ def download_template():
         ws = wb.active
         ws.title = "會員資料"
 
-        # 定義欄位順序
+        # 定義欄位順序（與上傳檔案格式一致）
         headers = [
-            '會員/來賓',
+            '會員類型',
             '帳號',
             '中文姓名',
             '英文姓名',
