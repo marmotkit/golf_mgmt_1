@@ -312,12 +312,19 @@ def upload_members():
                 
             # 檢查必要欄位
             required_columns = {
-                '會員編號': ['會員編號', '會員號碼'],
-                '會員類型': ['會員類型', '類型', '會員/來賓'],
-                '帳號': ['帳號', '帳戶', 'account'],
-                '是否為管理員': ['是否為管理員', '管理員'],
-                '性別': ['性別', 'gender'],
-                '差點': ['差點', '最新差點']
+                '會員編號': ['會員編號', '會員號碼', 'Member ID', 'MemberID'],
+                '會員類型': ['會員類型', '類型', '會員/來賓', 'Member Type'],
+                '帳號': ['帳號', '帳戶', 'account', 'Account'],
+                '是否為管理員': ['是否為管理員', '管理員', 'Is Administrator?', 'Is Admin'],
+                '性別': ['性別', 'gender', 'Gender'],
+                '差點': ['差點', '最新差點', 'Handicap', 'Latest Handicap']
+            }
+            
+            # 可選欄位的映射（支持多種可能的欄位名稱）
+            optional_columns = {
+                '中文姓名': ['中文姓名', 'Chinese Name', '中文名'],
+                '英文姓名': ['英文姓名', 'English Name', '英文名'],
+                '系級': ['系級', 'Department/Grade', '系所', 'Department']
             }
 
             # 檢查每個必要欄位
@@ -345,9 +352,30 @@ def upload_members():
                     'error_messages': [error_msg],
                     'success_count': 0
                 }), 400
+            
+            # 處理可選欄位：在重命名必要欄位之前尋找並建立映射
+            # 記錄哪些欄位名稱已經被必要欄位使用
+            used_column_names = set(column_mapping.values())
+            
+            optional_mapping = {}
+            for standard_col, possible_names in optional_columns.items():
+                # 如果標準名稱已經被必要欄位使用，跳過
+                if standard_col in column_mapping:
+                    continue
+                    
+                # 尋找可選欄位的原始名稱
+                for name in possible_names:
+                    # 如果這個名稱存在於 DataFrame 且沒有被必要欄位使用
+                    if name in df.columns and name not in used_column_names:
+                        optional_mapping[standard_col] = name
+                        break
                 
-            # 重命名欄位以統一處理
+            # 先重命名必要欄位
             df = df.rename(columns={v: k for k, v in column_mapping.items()})
+            
+            # 再重命名可選欄位（使用原始欄位名稱）
+            if optional_mapping:
+                df = df.rename(columns={v: k for k, v in optional_mapping.items()})
 
             # 清理和驗證數據
             error_messages = []
@@ -410,7 +438,7 @@ def upload_members():
             }
             
             # 處理每一行資料
-            for row in valid_rows:
+            for idx, row in enumerate(valid_rows):
                 try:
                     member_number = str(row['會員編號']).strip()
                     
@@ -419,22 +447,49 @@ def upload_members():
                     
                     if not member:
                         # 如果會員不存在，創建新會員
+                        # 安全地獲取可選欄位，如果欄位不存在則返回空字串
+                        chinese_name = str(row.get('中文姓名', '')).strip() if '中文姓名' in row else ''
+                        english_name = str(row.get('英文姓名', '')).strip() if '英文姓名' in row else ''
+                        department_class = str(row.get('系級', '')).strip() if '系級' in row else ''
+                        
                         member = Member(
                             member_number=member_number,
                             account=str(row['帳號']).strip(),
-                            chinese_name=str(row.get('中文姓名', '')).strip(),
-                            english_name=str(row.get('英文姓名', '')).strip(),
-                            department_class=str(row.get('系級', '')).strip(),
+                            chinese_name=chinese_name,
+                            english_name=english_name,
+                            department_class=department_class,
                             is_guest=str(row['會員類型']).strip() == '來賓',
                             is_admin=str(row['是否為管理員']).strip() == '是',
                             gender=str(row['性別']).strip()
                         )
                         db.session.add(member)
                         db.session.flush()  # 獲取新會員的 ID
+                        # 更新現有會員字典，以便後續查找
+                        existing_members[member_number] = member
+                    else:
+                        # 如果會員已存在，更新會員資料（可選欄位）
+                        if '中文姓名' in row and str(row['中文姓名']).strip():
+                            member.chinese_name = str(row['中文姓名']).strip()
+                        if '英文姓名' in row and str(row['英文姓名']).strip():
+                            member.english_name = str(row['英文姓名']).strip()
+                        if '系級' in row and str(row['系級']).strip():
+                            member.department_class = str(row['系級']).strip()
+                        # 更新其他可能變更的欄位
+                        member.account = str(row['帳號']).strip()
+                        member.is_guest = str(row['會員類型']).strip() == '來賓'
+                        member.is_admin = str(row['是否為管理員']).strip() == '是'
+                        member.gender = str(row['性別']).strip()
                     
                     # 創建新的版本記錄
+                    handicap_value = None
+                    if '差點' in row and str(row['差點']).strip():
+                        try:
+                            handicap_value = float(str(row['差點']).strip())
+                        except (ValueError, TypeError):
+                            logger.warning(f'第 {idx + 2} 行：無法解析差點值：{row["差點"]}')
+                    
                     version_data = {
-                        'handicap': float(str(row['差點']).strip()) if '差點' in row and str(row['差點']).strip() else None
+                        'handicap': handicap_value
                     }
                     
                     member_version = MemberVersion(
@@ -445,8 +500,18 @@ def upload_members():
                     db.session.add(member_version)
                     success_count += 1
                     
+                except KeyError as e:
+                    error_msg = f'第 {idx + 2} 行：缺少必要欄位 {str(e)}'
+                    logger.error(error_msg)
+                    logger.error(f'該行可用欄位：{list(row.keys())}')
+                    # 繼續處理下一行，但記錄錯誤
+                    continue
                 except Exception as e:
-                    logger.error(f'Error processing row: {str(e)}')
+                    error_msg = f'第 {idx + 2} 行處理失敗：{str(e)}'
+                    logger.error(error_msg)
+                    logger.error(f'該行資料內容：{row.to_dict() if hasattr(row, "to_dict") else dict(row)}')
+                    logger.error(traceback.format_exc())
+                    # 繼續處理下一行，但記錄錯誤
                     continue
             
             try:
