@@ -805,22 +805,106 @@ const Members = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={uploadOpen} onClose={handleUploadClose}>
+      <Dialog open={uploadOpen} onClose={handleUploadClose} maxWidth="md" fullWidth>
         <DialogTitle>上傳會員資料</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, my: 2 }}>
             <Typography variant="body2" color="text.secondary">
               請依照 Excel 範本格式填寫會員資料後上傳。
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            
+            <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 'bold' }}>
               必填欄位：
-              <ul>
-                <li>會員編號（M開頭為男性會員，F開頭為女性會員）</li>
-                <li>帳號</li>
-                <li>中文姓名</li>
-                <li>會員類型（會員/來賓）</li>
-                <li>是否為管理員（是/否）</li>
-                <li>性別（M/F）</li>
+            </Typography>
+            <Box component="ul" sx={{ pl: 3, m: 0 }}>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  會員編號：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}必填，長度不超過10個字符。M開頭為男性會員，F開頭為女性會員，例如：M385、F123
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  帳號：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}必填，必須唯一，不能與其他會員重複。例如：duvaltw、jimmy.wong
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  中文姓名：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}必填，會員的中文姓名。例如：郭建成、汪濟民
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  會員類型：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}必填，只能填寫「會員」或「來賓」
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  是否為管理員：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}必填，只能填寫「是」或「否」
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  性別：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}必填，只能填寫「M」（男性）或「F」（女性）
+                </Typography>
+              </li>
+            </Box>
+
+            <Typography variant="subtitle2" sx={{ mt: 2, fontWeight: 'bold' }}>
+              選填欄位：
+            </Typography>
+            <Box component="ul" sx={{ pl: 3, m: 0 }}>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  英文姓名：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}選填，會員的英文姓名。例如：jimmy wong、Johnson Tang
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  系級：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}選填，學系或級別。例如：MBA15、EMBA14、化00、1982
+                </Typography>
+              </li>
+              <li>
+                <Typography variant="body2" component="span" sx={{ fontWeight: 'medium' }}>
+                  最新差點：
+                </Typography>
+                <Typography variant="body2" component="span" color="text.secondary">
+                  {' '}選填，必須為數字，可包含小數點。例如：0、12、7、6.2、17.5
+                </Typography>
+              </li>
+            </Box>
+
+            <Typography variant="body2" color="warning.main" sx={{ mt: 2, p: 1.5, bgcolor: 'warning.light', borderRadius: 1 }}>
+              <strong>注意事項：</strong>
+              <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
+                <li>請確保所有必填欄位都有填寫，且格式正確</li>
+                <li>帳號必須唯一，不能與現有會員重複</li>
+                <li>會員編號必須唯一，不能與現有會員重複</li>
+                <li>如果帳號已存在但會員編號不同，系統會自動更新該會員的會員編號</li>
+                <li>檔案格式必須為 .xlsx 或 .xls</li>
               </ul>
             </Typography>
             <input
