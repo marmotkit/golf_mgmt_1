@@ -370,12 +370,11 @@ def upload_members():
                         optional_mapping[standard_col] = name
                         break
                 
-            # 先重命名必要欄位
-            df = df.rename(columns={v: k for k, v in column_mapping.items()})
-            
-            # 再重命名可選欄位（使用原始欄位名稱）
-            if optional_mapping:
-                df = df.rename(columns={v: k for k, v in optional_mapping.items()})
+            # 合併所有映射，一次性重命名所有欄位
+            all_column_mapping = {**column_mapping, **optional_mapping}
+            # 建立反向映射：原始名稱 -> 標準名稱
+            rename_dict = {v: k for k, v in all_column_mapping.items()}
+            df = df.rename(columns=rename_dict)
 
             # 清理和驗證數據
             error_messages = []
@@ -438,6 +437,8 @@ def upload_members():
             }
             
             # 處理每一行資料
+            processing_errors = []  # 累積處理錯誤
+            
             for idx, row in enumerate(valid_rows):
                 try:
                     member_number = str(row['會員編號']).strip()
@@ -448,9 +449,20 @@ def upload_members():
                     if not member:
                         # 如果會員不存在，創建新會員
                         # 安全地獲取可選欄位，如果欄位不存在則返回空字串
-                        chinese_name = str(row.get('中文姓名', '')).strip() if '中文姓名' in row else ''
-                        english_name = str(row.get('英文姓名', '')).strip() if '英文姓名' in row else ''
-                        department_class = str(row.get('系級', '')).strip() if '系級' in row else ''
+                        try:
+                            chinese_name = str(row['中文姓名']).strip() if '中文姓名' in row and pd.notna(row['中文姓名']) else ''
+                        except (KeyError, TypeError):
+                            chinese_name = ''
+                        
+                        try:
+                            english_name = str(row['英文姓名']).strip() if '英文姓名' in row and pd.notna(row['英文姓名']) else ''
+                        except (KeyError, TypeError):
+                            english_name = ''
+                        
+                        try:
+                            department_class = str(row['系級']).strip() if '系級' in row and pd.notna(row['系級']) else ''
+                        except (KeyError, TypeError):
+                            department_class = ''
                         
                         member = Member(
                             member_number=member_number,
@@ -468,12 +480,24 @@ def upload_members():
                         existing_members[member_number] = member
                     else:
                         # 如果會員已存在，更新會員資料（可選欄位）
-                        if '中文姓名' in row and str(row['中文姓名']).strip():
-                            member.chinese_name = str(row['中文姓名']).strip()
-                        if '英文姓名' in row and str(row['英文姓名']).strip():
-                            member.english_name = str(row['英文姓名']).strip()
-                        if '系級' in row and str(row['系級']).strip():
-                            member.department_class = str(row['系級']).strip()
+                        try:
+                            if '中文姓名' in row and pd.notna(row['中文姓名']) and str(row['中文姓名']).strip():
+                                member.chinese_name = str(row['中文姓名']).strip()
+                        except (KeyError, TypeError):
+                            pass
+                        
+                        try:
+                            if '英文姓名' in row and pd.notna(row['英文姓名']) and str(row['英文姓名']).strip():
+                                member.english_name = str(row['英文姓名']).strip()
+                        except (KeyError, TypeError):
+                            pass
+                        
+                        try:
+                            if '系級' in row and pd.notna(row['系級']) and str(row['系級']).strip():
+                                member.department_class = str(row['系級']).strip()
+                        except (KeyError, TypeError):
+                            pass
+                        
                         # 更新其他可能變更的欄位
                         member.account = str(row['帳號']).strip()
                         member.is_guest = str(row['會員類型']).strip() == '來賓'
@@ -482,7 +506,7 @@ def upload_members():
                     
                     # 創建新的版本記錄
                     handicap_value = None
-                    if '差點' in row and str(row['差點']).strip():
+                    if '差點' in row and pd.notna(row['差點']) and str(row['差點']).strip():
                         try:
                             handicap_value = float(str(row['差點']).strip())
                         except (ValueError, TypeError):
@@ -503,16 +527,34 @@ def upload_members():
                 except KeyError as e:
                     error_msg = f'第 {idx + 2} 行：缺少必要欄位 {str(e)}'
                     logger.error(error_msg)
-                    logger.error(f'該行可用欄位：{list(row.keys())}')
+                    try:
+                        logger.error(f'該行可用欄位：{list(row.keys())}')
+                    except:
+                        pass
+                    processing_errors.append(error_msg)
                     # 繼續處理下一行，但記錄錯誤
                     continue
                 except Exception as e:
                     error_msg = f'第 {idx + 2} 行處理失敗：{str(e)}'
                     logger.error(error_msg)
-                    logger.error(f'該行資料內容：{row.to_dict() if hasattr(row, "to_dict") else dict(row)}')
+                    try:
+                        row_dict = row.to_dict() if hasattr(row, "to_dict") else dict(row)
+                        logger.error(f'該行資料內容：{row_dict}')
+                    except:
+                        pass
                     logger.error(traceback.format_exc())
+                    processing_errors.append(error_msg)
                     # 繼續處理下一行，但記錄錯誤
                     continue
+            
+            # 如果有處理錯誤且沒有成功處理任何記錄，返回錯誤
+            if processing_errors and success_count == 0:
+                logger.error(f'所有行處理都失敗，共 {len(processing_errors)} 個錯誤')
+                return jsonify({
+                    'error': '所有資料處理都失敗',
+                    'error_messages': processing_errors[:10],  # 最多返回前10個錯誤
+                    'success_count': 0
+                }), 400
             
             try:
                 db.session.commit()
