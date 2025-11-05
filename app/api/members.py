@@ -430,10 +430,17 @@ def upload_members():
             # 不再刪除所有資料，而是保留舊版本
             success_count = 0
             
-            # 建立會員資料字典，用於快速查找
-            existing_members = {
+            # 建立會員資料字典，用於快速查找（按會員編號和帳號）
+            all_members = Member.query.all()
+            existing_by_number = {
                 member.member_number: member 
-                for member in Member.query.all()
+                for member in all_members
+                if member.member_number
+            }
+            existing_by_account = {
+                member.account: member 
+                for member in all_members
+                if member.account
             }
             
             # 處理每一行資料
@@ -442,9 +449,33 @@ def upload_members():
             for idx, row in enumerate(valid_rows):
                 try:
                     member_number = str(row['會員編號']).strip()
+                    account = str(row['帳號']).strip()
                     
-                    # 檢查會員是否已存在
-                    member = existing_members.get(member_number)
+                    # 檢查會員是否已存在（按會員編號或帳號）
+                    member = existing_by_number.get(member_number)
+                    
+                    # 如果按會員編號找不到，但帳號存在，檢查是否應該更新
+                    if not member and account:
+                        member = existing_by_account.get(account)
+                        if member:
+                            # 檢查現有會員的會員編號
+                            existing_member_number = str(member.member_number) if member.member_number else None
+                            # 如果找到的會員編號不同或為空，更新會員編號
+                            if existing_member_number != member_number:
+                                # 檢查新的會員編號是否已被其他會員使用
+                                if member_number in existing_by_number:
+                                    error_msg = f'第 {idx + 2} 行：會員編號 {member_number} 已被其他會員使用，但帳號 {account} 已存在於會員編號 {existing_member_number}'
+                                    logger.warning(error_msg)
+                                    processing_errors.append(error_msg)
+                                    continue
+                                # 更新會員編號
+                                old_number = existing_member_number or '(無)'
+                                member.member_number = member_number
+                                existing_by_number[member_number] = member
+                                # 如果舊的會員編號存在，從字典中移除
+                                if existing_member_number and existing_member_number in existing_by_number:
+                                    del existing_by_number[existing_member_number]
+                                logger.info(f'更新會員 {account} 的會員編號從 {old_number} 到 {member_number}')
                     
                     if not member:
                         # 如果會員不存在，創建新會員
@@ -464,9 +495,16 @@ def upload_members():
                         except (KeyError, TypeError):
                             department_class = ''
                         
+                        # 檢查帳號是否已被使用（在創建新會員前）
+                        if account and account in existing_by_account:
+                            error_msg = f'第 {idx + 2} 行：帳號 {account} 已被會員編號 {existing_by_account[account].member_number} 使用，無法創建新會員 {member_number}'
+                            logger.error(error_msg)
+                            processing_errors.append(error_msg)
+                            continue
+                        
                         member = Member(
                             member_number=member_number,
-                            account=str(row['帳號']).strip(),
+                            account=account,
                             chinese_name=chinese_name,
                             english_name=english_name,
                             department_class=department_class,
@@ -477,9 +515,11 @@ def upload_members():
                         db.session.add(member)
                         db.session.flush()  # 獲取新會員的 ID
                         # 更新現有會員字典，以便後續查找
-                        existing_members[member_number] = member
+                        existing_by_number[member_number] = member
+                        if account:
+                            existing_by_account[account] = member
                     else:
-                        # 如果會員已存在，更新會員資料（可選欄位）
+                        # 如果會員已存在，更新會員資料
                         try:
                             if '中文姓名' in row and pd.notna(row['中文姓名']) and str(row['中文姓名']).strip():
                                 member.chinese_name = str(row['中文姓名']).strip()
@@ -499,7 +539,25 @@ def upload_members():
                             pass
                         
                         # 更新其他可能變更的欄位
-                        member.account = str(row['帳號']).strip()
+                        # 注意：如果帳號改變，需要更新 existing_by_account 字典
+                        old_account = member.account
+                        new_account = str(row['帳號']).strip()
+                        
+                        if new_account and new_account != old_account:
+                            # 檢查新帳號是否已被使用
+                            if new_account in existing_by_account and existing_by_account[new_account].id != member.id:
+                                error_msg = f'第 {idx + 2} 行：帳號 {new_account} 已被其他會員使用'
+                                logger.error(error_msg)
+                                processing_errors.append(error_msg)
+                                continue
+                            # 更新帳號
+                            member.account = new_account
+                            # 更新字典
+                            if old_account and old_account in existing_by_account:
+                                del existing_by_account[old_account]
+                            if new_account:
+                                existing_by_account[new_account] = member
+                        
                         member.is_guest = str(row['會員類型']).strip() == '來賓'
                         member.is_admin = str(row['是否為管理員']).strip() == '是'
                         member.gender = str(row['性別']).strip()
